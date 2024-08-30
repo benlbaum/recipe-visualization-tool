@@ -16,10 +16,12 @@ import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import UploadIcon from '@mui/icons-material/Upload';
 
-const COLUMN_WIDTH = 300;
+const COLUMN_WIDTH = 300; // X-Axis Snapping
+const ROW_HEIGHT = 100; // Y-Axis Snapping
 const NODE_WIDTH = 200;
 
-const getNearestColumn = (x) => Math.round(x / COLUMN_WIDTH) * COLUMN_WIDTH;
+const getNearestColumn = (x) => Math.round(x / COLUMN_WIDTH) * COLUMN_WIDTH; // X-Axis Snapping
+const getNearestRow = (y) => Math.round(y / ROW_HEIGHT) * ROW_HEIGHT; // Y-Axis Snapping
 
 const nodeStyle = {
   width: `${NODE_WIDTH}px`,
@@ -228,7 +230,7 @@ const RecipeVisualizer = () => {
         id: `ing-${Date.now()}`,
         type: 'ingredient',
         data: getNodeData('ingredient', newIngredient),
-        position: { x: 0, y: ingredients.length * 100 },
+        position: { x: 0, y: getNearestRow(ingredients.length * ROW_HEIGHT) },
       };
       setNodes((nds) => [...nds, newNode]);
       setIngredients([...ingredients, newNode]);
@@ -242,7 +244,7 @@ const RecipeVisualizer = () => {
         id: `step-${Date.now()}`,
         type: 'step',
         data: getNodeData('step', `${newStep.description} (${newStep.time} min)`),
-        position: { x: COLUMN_WIDTH, y: steps.length * 100 },
+        position: { x: COLUMN_WIDTH, y: getNearestRow(steps.length * ROW_HEIGHT) },
       };
       setNodes((nds) => [...nds, newNode]);
       setSteps([...steps, newNode]);
@@ -264,12 +266,14 @@ const RecipeVisualizer = () => {
     }
   };
 
-  const onNodeDragStop = (event, node) => {
-    const newX = getNearestColumn(node.position.x);
+  //Axis Snapping
+  const onNodeDragStop = (event, node) => { 
+    const newX = getNearestColumn(node.position.x); // X-Axis Snapping
+    const newY = getNearestRow(node.position.y); // Y-Axis Snapping
     setNodes((nds) =>
       nds.map((n) => {
         if (n.id === node.id) {
-          return { ...n, position: { ...n.position, x: newX } };
+          return { ...n, position: { ...n.position, x: newX, y: newY } };
         }
         return n;
       })
