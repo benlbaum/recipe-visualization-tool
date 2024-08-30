@@ -192,6 +192,701 @@ const RecipeVisualizer = () => {
 
   const fileInputRef = useRef(null);
 
+  const importDemoRecipe = () => {
+    const demoRecipe = {
+      "nodes": [
+        {
+          "id": "ing-1724614386913",
+          "type": "ingredient",
+          "data": {
+            "label": "2 Tbsp Unsalted Butter",
+            "background": "#F0E68C"
+          },
+          "position": {
+            "x": 0,
+            "y": -125.5
+          },
+          "width": 222,
+          "height": 72,
+          "selected": false,
+          "positionAbsolute": {
+            "x": 2,
+            "y": -125.5
+          },
+          "dragging": false
+        },
+        {
+          "id": "ing-1724614396851",
+          "type": "ingredient",
+          "data": {
+            "label": "3 Tbsp AP Flour",
+            "background": "#F0E68C"
+          },
+          "position": {
+            "x": 0,
+            "y": -10.368796104188363
+          },
+          "width": 222,
+          "height": 72,
+          "selected": false,
+          "positionAbsolute": {
+            "x": 0,
+            "y": -10.368796104188363
+          },
+          "dragging": false
+        },
+        {
+          "id": "ing-1724614407389",
+          "type": "ingredient",
+          "data": {
+            "label": "3/4 Cup Whole Milk",
+            "background": "#F0E68C"
+          },
+          "position": {
+            "x": 0,
+            "y": 97.531551867813
+          },
+          "width": 222,
+          "height": 72,
+          "selected": false,
+          "positionAbsolute": {
+            "x": 1.515716566510406,
+            "y": 97.531551867813
+          },
+          "dragging": false
+        },
+        {
+          "id": "ing-1724614444476",
+          "type": "ingredient",
+          "data": {
+            "label": "2/3 Cup Beer",
+            "background": "#F0E68C"
+          },
+          "position": {
+            "x": 0,
+            "y": 220.9385394307286
+          },
+          "width": 222,
+          "height": 72,
+          "selected": false,
+          "positionAbsolute": {
+            "x": -1.7411011265922554,
+            "y": 220.9385394307286
+          },
+          "dragging": false
+        },
+        {
+          "id": "ing-1724614453468",
+          "type": "ingredient",
+          "data": {
+            "label": "1 Tsp Worcestershire Sauce",
+            "background": "#F0E68C"
+          },
+          "position": {
+            "x": 0,
+            "y": 296.30422478502953
+          },
+          "width": 222,
+          "height": 72,
+          "selected": false,
+          "positionAbsolute": {
+            "x": -1.7411011265922411,
+            "y": 296.30422478502953
+          },
+          "dragging": false
+        },
+        {
+          "id": "ing-1724614462309",
+          "type": "ingredient",
+          "data": {
+            "label": "1 Tsp Dijon Mustard",
+            "background": "#F0E68C"
+          },
+          "position": {
+            "x": 0,
+            "y": 374.6343146456993
+          },
+          "width": 222,
+          "height": 72,
+          "selected": false,
+          "positionAbsolute": {
+            "x": 0,
+            "y": 374.6343146456993
+          },
+          "dragging": false
+        },
+        {
+          "id": "ing-1724614475862",
+          "type": "ingredient",
+          "data": {
+            "label": "1/2 Tsp Garlic Powder",
+            "background": "#F0E68C"
+          },
+          "position": {
+            "x": 0,
+            "y": 450.96440450636896
+          },
+          "width": 222,
+          "height": 72,
+          "selected": false,
+          "positionAbsolute": {
+            "x": 0,
+            "y": 450.96440450636896
+          },
+          "dragging": false
+        },
+        {
+          "id": "ing-1724614488095",
+          "type": "ingredient",
+          "data": {
+            "label": "1/4 Tsp Smoked Paprika",
+            "background": "#F0E68C"
+          },
+          "position": {
+            "x": 0,
+            "y": 530.7766966202231
+          },
+          "width": 222,
+          "height": 72,
+          "selected": false,
+          "positionAbsolute": {
+            "x": 0,
+            "y": 530.7766966202231
+          },
+          "dragging": false
+        },
+        {
+          "id": "ing-1724614495482",
+          "type": "ingredient",
+          "data": {
+            "label": "1/4 Tsp Salt",
+            "background": "#F0E68C"
+          },
+          "position": {
+            "x": 0,
+            "y": 609.106786480893
+          },
+          "width": 222,
+          "height": 72,
+          "selected": false,
+          "positionAbsolute": {
+            "x": 0,
+            "y": 609.106786480893
+          },
+          "dragging": false
+        },
+        {
+          "id": "ing-1724614513415",
+          "type": "ingredient",
+          "data": {
+            "label": "2.5 Cups Shredded Sharp Cheddar Cheese",
+            "background": "#F0E68C"
+          },
+          "position": {
+            "x": 0,
+            "y": -259.9999999999999
+          },
+          "width": 222,
+          "height": 72,
+          "selected": false,
+          "positionAbsolute": {
+            "x": 0,
+            "y": -259.9999999999999
+          },
+          "dragging": false
+        },
+        {
+          "id": "step-1724614546393",
+          "type": "step",
+          "data": {
+            "label": "Shred Cheese (1 min)",
+            "background": "#ADD8E6"
+          },
+          "position": {
+            "x": 300,
+            "y": -259.6
+          },
+          "width": 222,
+          "height": 72,
+          "selected": false,
+          "positionAbsolute": {
+            "x": 288,
+            "y": -259.6
+          },
+          "dragging": false
+        },
+        {
+          "id": "step-1724614592526",
+          "type": "step",
+          "data": {
+            "label": "Melt in Medium Saucepan over Medium Heat (1 min)",
+            "background": "#ADD8E6"
+          },
+          "position": {
+            "x": 300,
+            "y": -126
+          },
+          "width": 222,
+          "height": 72,
+          "selected": false,
+          "positionAbsolute": {
+            "x": 292,
+            "y": -126
+          },
+          "dragging": false
+        },
+        {
+          "id": "step-1724614632588",
+          "type": "step",
+          "data": {
+            "label": "Whisk Together Until Slightly Thickened (2 min)",
+            "background": "#ADD8E6"
+          },
+          "position": {
+            "x": 600,
+            "y": -30
+          },
+          "width": 222,
+          "height": 72,
+          "selected": false,
+          "positionAbsolute": {
+            "x": 600,
+            "y": -30
+          },
+          "dragging": false
+        },
+        {
+          "id": "step-1724614696931",
+          "type": "step",
+          "data": {
+            "label": "Whisk In as a Slow and Steady Stream (3 min)",
+            "background": "#ADD8E6"
+          },
+          "position": {
+            "x": 900,
+            "y": 63.98694340367746
+          },
+          "width": 222,
+          "height": 72,
+          "selected": false,
+          "positionAbsolute": {
+            "x": 898,
+            "y": 63.98694340367746
+          },
+          "dragging": false
+        },
+        {
+          "id": "step-1724614856182",
+          "type": "step",
+          "data": {
+            "label": "Whisk In One at A Time (4 min)",
+            "background": "#ADD8E6"
+          },
+          "position": {
+            "x": 1200,
+            "y": 160
+          },
+          "width": 222,
+          "height": 72,
+          "selected": false,
+          "positionAbsolute": {
+            "x": 1196,
+            "y": 160
+          },
+          "dragging": false
+        },
+        {
+          "id": "step-1724615009608",
+          "type": "step",
+          "data": {
+            "label": "Slowing Fold In Until Fully Incorporated (5 min)",
+            "background": "#ADD8E6"
+          },
+          "position": {
+            "x": 1500,
+            "y": 72.00000000000006
+          },
+          "width": 222,
+          "height": 72,
+          "selected": false,
+          "positionAbsolute": {
+            "x": 1528.8000000000009,
+            "y": 72.00000000000006
+          },
+          "dragging": false
+        },
+        {
+          "id": "final-dish",
+          "type": "finalDish",
+          "data": {
+            "label": "Beer Cheese Dip",
+            "background": "#90EE90"
+          },
+          "position": {
+            "x": 1800,
+            "y": 72
+          },
+          "width": 222,
+          "height": 72,
+          "selected": true,
+          "positionAbsolute": {
+            "x": 1800,
+            "y": 72
+          },
+          "dragging": false
+        }
+      ],
+      "edges": [
+        {
+          "source": "ing-1724614513415",
+          "sourceHandle": null,
+          "target": "step-1724614546393",
+          "targetHandle": null,
+          "type": "custom",
+          "data": {},
+          "id": "reactflow__edge-ing-1724614513415-step-1724614546393"
+        },
+        {
+          "source": "ing-1724614386913",
+          "sourceHandle": null,
+          "target": "step-1724614592526",
+          "targetHandle": null,
+          "type": "custom",
+          "data": {},
+          "id": "reactflow__edge-ing-1724614386913-step-1724614592526"
+        },
+        {
+          "source": "ing-1724614396851",
+          "sourceHandle": null,
+          "target": "step-1724614632588",
+          "targetHandle": null,
+          "type": "custom",
+          "data": {},
+          "id": "reactflow__edge-ing-1724614396851-step-1724614632588"
+        },
+        {
+          "source": "step-1724614592526",
+          "sourceHandle": null,
+          "target": "step-1724614632588",
+          "targetHandle": null,
+          "type": "custom",
+          "data": {},
+          "id": "reactflow__edge-step-1724614592526-step-1724614632588"
+        },
+        {
+          "source": "step-1724614632588",
+          "sourceHandle": null,
+          "target": "step-1724614696931",
+          "targetHandle": null,
+          "type": "custom",
+          "data": {},
+          "id": "reactflow__edge-step-1724614632588-step-1724614696931"
+        },
+        {
+          "source": "ing-1724614407389",
+          "sourceHandle": null,
+          "target": "step-1724614696931",
+          "targetHandle": null,
+          "type": "custom",
+          "data": {},
+          "id": "reactflow__edge-ing-1724614407389-step-1724614696931"
+        },
+        {
+          "source": "ing-1724614444476",
+          "sourceHandle": null,
+          "target": "step-1724614856182",
+          "targetHandle": null,
+          "type": "custom",
+          "data": {},
+          "id": "reactflow__edge-ing-1724614444476-step-1724614856182"
+        },
+        {
+          "source": "ing-1724614453468",
+          "sourceHandle": null,
+          "target": "step-1724614856182",
+          "targetHandle": null,
+          "type": "custom",
+          "data": {},
+          "id": "reactflow__edge-ing-1724614453468-step-1724614856182"
+        },
+        {
+          "source": "ing-1724614462309",
+          "sourceHandle": null,
+          "target": "step-1724614856182",
+          "targetHandle": null,
+          "type": "custom",
+          "data": {},
+          "id": "reactflow__edge-ing-1724614462309-step-1724614856182"
+        },
+        {
+          "source": "ing-1724614475862",
+          "sourceHandle": null,
+          "target": "step-1724614856182",
+          "targetHandle": null,
+          "type": "custom",
+          "data": {},
+          "id": "reactflow__edge-ing-1724614475862-step-1724614856182"
+        },
+        {
+          "source": "ing-1724614488095",
+          "sourceHandle": null,
+          "target": "step-1724614856182",
+          "targetHandle": null,
+          "type": "custom",
+          "data": {},
+          "id": "reactflow__edge-ing-1724614488095-step-1724614856182"
+        },
+        {
+          "source": "ing-1724614495482",
+          "sourceHandle": null,
+          "target": "step-1724614856182",
+          "targetHandle": null,
+          "type": "custom",
+          "data": {},
+          "id": "reactflow__edge-ing-1724614495482-step-1724614856182"
+        },
+        {
+          "source": "step-1724614546393",
+          "sourceHandle": null,
+          "target": "step-1724615009608",
+          "targetHandle": null,
+          "type": "custom",
+          "data": {},
+          "id": "reactflow__edge-step-1724614546393-step-1724615009608"
+        },
+        {
+          "source": "step-1724614856182",
+          "sourceHandle": null,
+          "target": "step-1724615009608",
+          "targetHandle": null,
+          "type": "custom",
+          "data": {},
+          "id": "reactflow__edge-step-1724614856182-step-1724615009608"
+        },
+        {
+          "source": "step-1724614696931",
+          "sourceHandle": null,
+          "target": "step-1724614856182",
+          "targetHandle": null,
+          "type": "custom",
+          "data": {},
+          "id": "reactflow__edge-step-1724614696931-step-1724614856182"
+        },
+        {
+          "source": "step-1724615009608",
+          "sourceHandle": null,
+          "target": "final-dish",
+          "targetHandle": null,
+          "type": "custom",
+          "data": {},
+          "id": "reactflow__edge-step-1724615009608-final-dish"
+        }
+      ],
+      "ingredients": [
+        {
+          "id": "ing-1724614386913",
+          "type": "ingredient",
+          "data": {
+            "label": "2 Tbsp Unsalted Butter",
+            "background": "#F0E68C"
+          },
+          "position": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "id": "ing-1724614396851",
+          "type": "ingredient",
+          "data": {
+            "label": "3 Tbsp AP Flour",
+            "background": "#F0E68C"
+          },
+          "position": {
+            "x": 0,
+            "y": 100
+          }
+        },
+        {
+          "id": "ing-1724614407389",
+          "type": "ingredient",
+          "data": {
+            "label": "3/4 Cup Whole Milk",
+            "background": "#F0E68C"
+          },
+          "position": {
+            "x": 0,
+            "y": 200
+          }
+        },
+        {
+          "id": "ing-1724614444476",
+          "type": "ingredient",
+          "data": {
+            "label": "2/3 Cup Beer",
+            "background": "#F0E68C"
+          },
+          "position": {
+            "x": 0,
+            "y": 300
+          }
+        },
+        {
+          "id": "ing-1724614453468",
+          "type": "ingredient",
+          "data": {
+            "label": "1 Tsp Worcestershire Sauce",
+            "background": "#F0E68C"
+          },
+          "position": {
+            "x": 0,
+            "y": 400
+          }
+        },
+        {
+          "id": "ing-1724614462309",
+          "type": "ingredient",
+          "data": {
+            "label": "1 Tsp Dijon Mustard",
+            "background": "#F0E68C"
+          },
+          "position": {
+            "x": 0,
+            "y": 500
+          }
+        },
+        {
+          "id": "ing-1724614475862",
+          "type": "ingredient",
+          "data": {
+            "label": "1/2 Tsp Garlic Powder",
+            "background": "#F0E68C"
+          },
+          "position": {
+            "x": 0,
+            "y": 600
+          }
+        },
+        {
+          "id": "ing-1724614488095",
+          "type": "ingredient",
+          "data": {
+            "label": "1/4 Tsp Smoked Paprika",
+            "background": "#F0E68C"
+          },
+          "position": {
+            "x": 0,
+            "y": 700
+          }
+        },
+        {
+          "id": "ing-1724614495482",
+          "type": "ingredient",
+          "data": {
+            "label": "1/4 Tsp Salt",
+            "background": "#F0E68C"
+          },
+          "position": {
+            "x": 0,
+            "y": 800
+          }
+        },
+        {
+          "id": "ing-1724614513415",
+          "type": "ingredient",
+          "data": {
+            "label": "2.5 Cups Shredded Sharp Cheddar Cheese",
+            "background": "#F0E68C"
+          },
+          "position": {
+            "x": 0,
+            "y": 900
+          }
+        }
+      ],
+      "steps": [
+        {
+          "id": "step-1724614546393",
+          "type": "step",
+          "data": {
+            "label": "Shred Cheese (1 min)",
+            "background": "#ADD8E6"
+          },
+          "position": {
+            "x": 300,
+            "y": 0
+          }
+        },
+        {
+          "id": "step-1724614592526",
+          "type": "step",
+          "data": {
+            "label": "Melt in Medium Saucepan over Medium Heat (1 min)",
+            "background": "#ADD8E6"
+          },
+          "position": {
+            "x": 300,
+            "y": 100
+          }
+        },
+        {
+          "id": "step-1724614632588",
+          "type": "step",
+          "data": {
+            "label": "Whisk Together Until Slightly Thickened (2 min)",
+            "background": "#ADD8E6"
+          },
+          "position": {
+            "x": 300,
+            "y": 200
+          }
+        },
+        {
+          "id": "step-1724614696931",
+          "type": "step",
+          "data": {
+            "label": "Whisk In as a Slow and Steady Stream (3 min)",
+            "background": "#ADD8E6"
+          },
+          "position": {
+            "x": 300,
+            "y": 300
+          }
+        },
+        {
+          "id": "step-1724614856182",
+          "type": "step",
+          "data": {
+            "label": "Whisk In One at A Time (4 min)",
+            "background": "#ADD8E6"
+          },
+          "position": {
+            "x": 300,
+            "y": 400
+          }
+        },
+        {
+          "id": "step-1724615009608",
+          "type": "step",
+          "data": {
+            "label": "Slowing Fold In Until Fully Incorporated (5 min)",
+            "background": "#ADD8E6"
+          },
+          "position": {
+            "x": 300,
+            "y": 500
+          }
+        }
+      ]
+    };
+
+    setNodes(demoRecipe.nodes);
+    setEdges(demoRecipe.edges);
+    setIngredients(demoRecipe.nodes.filter(node => node.type === 'ingredient'));
+    setSteps(demoRecipe.nodes.filter(node => node.type === 'step'));
+    setFinalDish(demoRecipe.nodes.find(node => node.type === 'finalDish'));
+  };
+
   const onConnect = useCallback((params) => {
     setEdges((eds) => addEdge({ ...params, type: 'custom', data: { onDelete: deleteEdge } }, eds));
   }, [setEdges]);
@@ -374,6 +1069,14 @@ const RecipeVisualizer = () => {
         >
           Import Recipe
         </Button>
+
+        <Button 
+          onClick={importDemoRecipe} 
+          variant="contained" 
+          color="secondary"
+        >
+          Import Demo Recipe
+        </Button>
       </Box>
       
       <Box sx={{ flexGrow: 1, width: '100%' }}>
@@ -387,9 +1090,16 @@ const RecipeVisualizer = () => {
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           fitView
+          minZoom={0.1}  // Allow zooming out to 10% of the original size
+          maxZoom={4}    // Allow zooming in to 400% of the original size
+          defaultZoom={1} // Start at 100% zoom
         >
           <Background />
-          <Controls />
+          <Controls
+            showZoom={true}
+            showFitView={true}
+            showInteractive={false}
+          />
         </ReactFlow>
       </Box>
     </Box>
