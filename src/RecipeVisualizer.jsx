@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import ReactFlow, { 
   Controls, 
   Background, 
@@ -20,9 +20,12 @@ import demoRecipe from './demoRecipe.json'
 const COLUMN_WIDTH = 300; // X-Axis Snapping
 const ROW_HEIGHT = 100; // Y-Axis Snapping
 const NODE_WIDTH = 200;
+const INGREDIENTS_COLUMN = 0;
+const STEPS_COLUMN = 1;
+const FINAL_DISH_COLUMN = 2;
 
 const getNearestColumn = (x) => Math.round(x / COLUMN_WIDTH) * COLUMN_WIDTH; // X-Axis Snapping
-const getNearestRow = (y) => Math.round(y / ROW_HEIGHT) * ROW_HEIGHT; // Y-Axis Snapping
+const getNearestRow = (y, nodeHeight) => Math.round((y + nodeHeight / 2 ) / ROW_HEIGHT) * ROW_HEIGHT - nodeHeight / 2; // Y-Axis Snapping
 
 const nodeStyle = {
   width: `${NODE_WIDTH}px`,
@@ -182,56 +185,49 @@ const edgeTypes = {
 };
 
 const RecipeVisualizer = () => {
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [ingredients, setIngredients] = useState([]);
   const [steps, setSteps] = useState([]);
   const [finalDish, setFinalDish] = useState(null);
   const [newIngredient, setNewIngredient] = useState('');
   const [newStep, setNewStep] = useState({ description: '', time: 0 });
   const [newFinalDish, setNewFinalDish] = useState('');
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   const fileInputRef = useRef(null);
 
-  const importDemoRecipe = () => {
-    setNodes(demoRecipe.nodes);
-    setEdges(demoRecipe.edges);
-    setIngredients(demoRecipe.nodes.filter(node => node.type === 'ingredient'));
-    setSteps(demoRecipe.nodes.filter(node => node.type === 'step'));
-    setFinalDish(demoRecipe.nodes.find(node => node.type === 'finalDish'));
-  };
+  const onConnect = useCallback((params) => 
+    setEdges((eds) => addEdge({ ...params, type: 'custom' }, eds)), 
+  [setEdges]);
 
-  const onConnect = useCallback((params) => {
-    setEdges((eds) => addEdge({ ...params, type: 'custom', data: { onDelete: deleteEdge } }, eds));
-  }, [setEdges]);
+  const adjustNodePosition = useCallback((node) => {
+    const newX = getNearestColumn(node.position.x);
+    const newY = getNearestRow(node.position.y, node.height);
+    return { ...node, position: { x: newX, y: newY } };
+  }, []);
 
-  const deleteEdge = useCallback((edgeId) => {
-    setEdges((eds) => eds.filter((edge) => edge.id !== edgeId));
-  }, [setEdges]);
+  const onNodeDragStop = useCallback((event, node) => {
+    setNodes((nds) => nds.map((n) => n.id === node.id ? adjustNodePosition(n) : n));
+  }, [setNodes, adjustNodePosition]);
 
-  const onEditNode = useCallback((nodeId, newLabel) => {
-    setNodes((nds) =>
-      nds.map((node) =>
-        node.id === nodeId
-          ? { ...node, data: { ...node.data, label: newLabel } }
-          : node
-      )
-    );
-  }, [setNodes]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setNodes((nds) => nds.map(adjustNodePosition));
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [setNodes, adjustNodePosition]);
 
-  const onDeleteNode = useCallback((nodeId) => {
-    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
-    setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
-  }, [setNodes, setEdges]);
-
-  const getNodeData = useCallback((type, label) => {
-    return {
-      label,
-      onEdit: onEditNode,
-      onDelete: onDeleteNode,
-      background: type === 'ingredient' ? '#F0E68C' : type === 'step' ? '#ADD8E6' : '#90EE90',
-    };
-  }, [onEditNode, onDeleteNode]);
+  const getNodeData = useCallback((type, label) => ({
+    label,
+    onEdit: (id, newLabel) => setNodes((nds) => 
+      nds.map((node) => node.id === id ? { ...node, data: { ...node.data, label: newLabel } } : node)
+    ),
+    onDelete: (id) => {
+      setNodes((nds) => nds.filter((n) => n.id !== id));
+      setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
+    },
+    background: type === 'ingredient' ? '#F0E68C' : type === 'step' ? '#ADD8E6' : '#90EE90',
+  }), [setNodes, setEdges]);
 
   const addIngredient = () => {
     if (newIngredient) {
@@ -239,11 +235,16 @@ const RecipeVisualizer = () => {
         id: `ing-${Date.now()}`,
         type: 'ingredient',
         data: getNodeData('ingredient', newIngredient),
-        position: { x: 0, y: getNearestRow(ingredients.length * ROW_HEIGHT) },
+        position: { 
+          x: INGREDIENTS_COLUMN * COLUMN_WIDTH, 
+          y: ingredients.length * ROW_HEIGHT
+        },
+        draggable: true,
       };
       setNodes((nds) => [...nds, newNode]);
-      setIngredients([...ingredients, newNode]);
+      setIngredients((prev) => [...prev, newNode]);
       setNewIngredient('');
+      setTimeout(() => setNodes((nds) => nds.map(adjustNodePosition)), 10);
     }
   };
 
@@ -253,40 +254,36 @@ const RecipeVisualizer = () => {
         id: `step-${Date.now()}`,
         type: 'step',
         data: getNodeData('step', `${newStep.description} (${newStep.time} min)`),
-        position: { x: COLUMN_WIDTH, y: getNearestRow(steps.length * ROW_HEIGHT) },
+        position: { 
+          x: STEPS_COLUMN * COLUMN_WIDTH, 
+          y: steps.length * ROW_HEIGHT
+        },
+        draggable: true,
       };
       setNodes((nds) => [...nds, newNode]);
-      setSteps([...steps, newNode]);
+      setSteps((prev) => [...prev, newNode]);
       setNewStep({ description: '', time: 0 });
+      setTimeout(() => setNodes((nds) => nds.map(adjustNodePosition)), 10);
     }
   };
 
   const addFinalDish = () => {
-    if (newFinalDish) {
+    if (newFinalDish && !finalDish) {
       const newNode = {
         id: 'final-dish',
         type: 'finalDish',
         data: getNodeData('finalDish', newFinalDish),
-        position: { x: COLUMN_WIDTH * 2, y: 0 },
+        position: { 
+          x: FINAL_DISH_COLUMN * COLUMN_WIDTH, 
+          y: 0
+        },
+        draggable: true,
       };
       setNodes((nds) => [...nds, newNode]);
       setFinalDish(newNode);
       setNewFinalDish('');
+      setTimeout(() => setNodes((nds) => nds.map(adjustNodePosition)), 10);
     }
-  };
-
-  //Axis Snapping
-  const onNodeDragStop = (event, node) => { 
-    const newX = getNearestColumn(node.position.x); // X-Axis Snapping
-    const newY = getNearestRow(node.position.y); // Y-Axis Snapping
-    setNodes((nds) =>
-      nds.map((n) => {
-        if (n.id === node.id) {
-          return { ...n, position: { ...n.position, x: newX, y: newY } };
-        }
-        return n;
-      })
-    );
   };
 
   const exportRecipe = () => {
@@ -329,6 +326,33 @@ const RecipeVisualizer = () => {
       reader.readAsText(file);
     }
   };
+
+  const importDemoRecipe = () => {
+    setNodes(demoRecipe.nodes);
+    setEdges(demoRecipe.edges);
+    setIngredients(demoRecipe.nodes.filter(node => node.type === 'ingredient'));
+    setSteps(demoRecipe.nodes.filter(node => node.type === 'step'));
+    setFinalDish(demoRecipe.nodes.find(node => node.type === 'finalDish'));
+  };
+
+  const deleteEdge = useCallback((edgeId) => {
+    setEdges((eds) => eds.filter((edge) => edge.id !== edgeId));
+  }, [setEdges]);
+
+  const onEditNode = useCallback((nodeId, newLabel) => {
+    setNodes((nds) =>
+      nds.map((node) =>
+        node.id === nodeId
+          ? { ...node, data: { ...node.data, label: newLabel } }
+          : node
+      )
+    );
+  }, [setNodes]);
+
+  const onDeleteNode = useCallback((nodeId) => {
+    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+    setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+  }, [setNodes, setEdges]);
 
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
