@@ -18,7 +18,7 @@ export function getStepDuration(data) {
   return Number.isFinite(fromLabel) && fromLabel > 0 ? fromLabel : 1;
 }
 
-function scheduleSteps(nodes, edges) {
+function scheduleSteps(nodes, edges, pixelsPerMinute) {
   const steps = new Map();
   for (const node of nodes) {
     if (node.type === 'step') {
@@ -47,7 +47,7 @@ function scheduleSteps(nodes, edges) {
     // Keep equivalent decimal-minute paths aligned (for example, 0.1 + 0.2
     // and 0.3) while retaining precision for short steps.
     step.endMinute = Number((step.startMinute + step.durationMinutes).toPrecision(15));
-    if (!Number.isFinite(step.endMinute * PIXELS_PER_MINUTE)) {
+    if (!Number.isFinite(step.endMinute * pixelsPerMinute)) {
       throw new Error('The recipe duration is too large to display.');
     }
     for (const next of step.successors) {
@@ -82,18 +82,18 @@ function placeRows(boxes) {
   }
 }
 
-export function layoutRecipe(nodes, edges) {
-  const steps = scheduleSteps(nodes, edges);
+export function layoutRecipe(nodes, edges, pixelsPerMinute = PIXELS_PER_MINUTE) {
+  const steps = scheduleSteps(nodes, edges, pixelsPerMinute);
   let totalMinutes = 0;
   for (const step of steps.values()) {
-    step.x = step.startMinute * PIXELS_PER_MINUTE;
-    step.width = Math.max(MIN_STEP_WIDTH, step.durationMinutes * PIXELS_PER_MINUTE);
+    step.x = step.startMinute * pixelsPerMinute;
+    step.width = Math.max(MIN_STEP_WIDTH, step.durationMinutes * pixelsPerMinute);
     totalMinutes = Math.max(totalMinutes, step.endMinute);
   }
 
   const boxes = nodes.map(node => {
     const step = steps.get(node.id);
-    let x = node.type === 'finalDish' ? totalMinutes * PIXELS_PER_MINUTE : -300;
+    let x = node.type === 'finalDish' ? totalMinutes * pixelsPerMinute : -300;
     let width = MIN_STEP_WIDTH;
     let data = node.data;
     if (step) {

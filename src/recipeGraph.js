@@ -3,17 +3,21 @@ import { getStepDescription, getStepDuration, layoutRecipe } from './recipeTimel
 
 export const emptyRecipe = { nodes: [], edges: [], error: '', importVersion: 0 };
 
-// Store the recipe once. The older file format also includes copies by node type.
+export function savedRecipeNode({ id, type, data }) {
+  const saved = { label: data.label, background: data.background };
+  if (Number.isFinite(data.preferredY)) saved.preferredY = data.preferredY;
+  if (type === 'step') {
+    saved.durationMinutes = data.durationMinutes;
+    // The legacy reader removes exactly one suffix, including when the
+    // cook's own description already ends with a duration.
+    saved.label = `${data.label} (${data.durationMinutes} min)`;
+  }
+  return { id, type, data: saved };
+}
+
+// Older readers also expect positions and copies grouped by node type.
 export function exportRecipe(nodes, edges) {
-  const savedNodes = nodes.map(({ id, type, data, position }) => {
-    const saved = { label: data.label, background: data.background };
-    if (Number.isFinite(data.preferredY)) saved.preferredY = data.preferredY;
-    if (type === 'step') {
-      saved.durationMinutes = data.durationMinutes;
-      saved.label = `${data.label} (${data.durationMinutes} min)`;
-    }
-    return { id, type, data: saved, position };
-  });
+  const savedNodes = nodes.map(node => ({ ...savedRecipeNode(node), position: node.position }));
   return {
     nodes: savedNodes,
     edges,
@@ -29,10 +33,11 @@ function readRecipe(file) {
     throw new Error('The recipe file needs a list of nodes and an optional list of edges.');
   }
   const ids = new Set();
-  const nodes = file.nodes.map(({ id, type, data }) => {
-    if (!id || ids.has(id) || !['step', 'ingredient', 'finalDish'].includes(type) ||
+  const nodes = file.nodes.map(node => {
+    const { id, type, data } = node ?? {};
+    if (typeof id !== 'string' || !id.trim() || ids.has(id) || !['step', 'ingredient', 'finalDish'].includes(type) ||
         typeof data?.label !== 'string') {
-      throw new Error('Each recipe node needs a unique ID, a supported type and a label.');
+      throw new Error('Each recipe node needs a unique text ID, a supported type and a label.');
     }
     ids.add(id);
     const restored = { label: data.label, background: data.background };
@@ -43,14 +48,56 @@ function readRecipe(file) {
     }
     return { id, type, data: restored };
   });
-  if (edges.some(edge => !ids.has(edge?.source) || !ids.has(edge?.target))) {
-    throw new Error('A recipe connection refers to a missing node.');
+  const edgeIds = new Set();
+  for (const edge of edges) {
+    if (!ids.has(edge?.source) || !ids.has(edge?.target)) {
+      throw new Error('A recipe connection refers to a missing node.');
+    }
+    if (edge.id == null) continue;
+    if (typeof edge.id !== 'string' || !edge.id.trim() || edgeIds.has(edge.id)) {
+      throw new Error('Recipe connection IDs must be unique, nonempty text.');
+    }
+    edgeIds.add(edge.id);
   }
-  return { nodes, edges };
+
+  // Keep hand-authored connections individually editable. Reserve every
+  // explicit ID first so a later edge never collides with a generated ID.
+  let sequence = 1;
+  const restoredEdges = edges.map(edge => {
+    if (edge.id != null) return edge;
+    let id;
+    do {
+      id = `imported-edge-${sequence++}`;
+    } while (edgeIds.has(id));
+    return { ...edge, id };
+  });
+  return { nodes, edges: restoredEdges };
 }
 
 function schedule(state, nodes, edges) {
   return { ...state, nodes: layoutRecipe(nodes, edges), edges, error: '' };
+}
+
+function saveItem(state, node, sources) {
+  const index = state.nodes.findIndex(item => item.id === node.id);
+  const nodes = [...state.nodes];
+  if (index < 0) nodes.push(node);
+  else nodes[index] = node;
+  if (!sources) return schedule(state, nodes, state.edges);
+
+  const incoming = new Set(sources);
+  const edges = state.edges.filter(edge => edge.target !== node.id || incoming.has(edge.source));
+  for (const edge of edges) {
+    if (edge.target === node.id) incoming.delete(edge.source);
+  }
+  let connected = edges;
+  for (const source of incoming) {
+    if (!nodes.some(item => item.id === source && item.type !== 'finalDish') || source === node.id) {
+      throw new Error('Choose a different ingredient or step as a prerequisite.');
+    }
+    connected = addEdge({ source, target: node.id, type: 'custom' }, connected);
+  }
+  return schedule(state, nodes, connected);
 }
 
 function changeNodes(state, changes) {
@@ -89,16 +136,23 @@ export function recipeReducer(state, action) {
         const { nodes, edges } = readRecipe(action.file);
         return { ...schedule(state, nodes, edges), importVersion: state.importVersion + 1 };
       }
+      case 'addIngredients': {
+        const { nodes } = readRecipe({ nodes: action.nodes });
+        const existing = new Set(state.nodes.map(node => node.id));
+        if (nodes.some(node => node.type !== 'ingredient' || !node.data.label.trim() || existing.has(node.id))) {
+          throw new Error('Each new ingredient needs its own ID and a name.');
+        }
+        return nodes.length ? schedule(state, [...state.nodes, ...nodes], state.edges) : state;
+      }
       case 'add':
-        return schedule(state, [...state.nodes, action.node], state.edges);
+      case 'saveItem':
+        return saveItem(state, action.node, action.sources);
       case 'edit': {
-        const nodes = state.nodes.map(node => {
-          if (node.id !== action.id) return node;
-          const data = { ...node.data, label: action.label };
-          if (node.type === 'step') data.durationMinutes = action.durationMinutes;
-          return { ...node, data };
-        });
-        return schedule(state, nodes, state.edges);
+        const node = state.nodes.find(item => item.id === action.id);
+        if (!node) return state;
+        const data = { ...node.data, label: action.label };
+        if (node.type === 'step') data.durationMinutes = action.durationMinutes;
+        return saveItem(state, { ...node, data });
       }
       case 'connect':
         return schedule(state, state.nodes, addEdge({ ...action.connection, type: 'custom' }, state.edges));

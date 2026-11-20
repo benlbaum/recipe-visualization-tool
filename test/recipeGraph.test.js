@@ -53,6 +53,46 @@ test('imports a nodes-only recipe as independent steps', () => {
   assert.equal(byId(state, 'cook').data.startMinute, 0);
 });
 
+test('connections without IDs acquire stable identities and can be removed individually after a round trip', () => {
+  const file = legacyRecipe();
+  file.edges = [
+    { source: 'cut', target: 'cook', style: { stroke: 'green' } },
+    { source: 'cut', target: 'dish' },
+    { id: 'imported-edge-1', source: 'cook', target: 'dish' },
+  ];
+  const state = load(file);
+  assert.equal(state.error, '');
+  const ids = state.edges.map(edge => edge.id);
+  assert.ok(ids.every(id => typeof id === 'string' && id.length > 0));
+  assert.equal(new Set(ids).size, 3);
+  assert.equal(ids[2], file.edges[2].id);
+  assert.deepEqual(load(file).edges, state.edges);
+  assert.equal(file.edges[0].id, undefined);
+  const restored = roundTrip(state);
+  assert.deepEqual(restored.edges, state.edges);
+  assert.deepEqual(restored.edges[0].style, file.edges[0].style);
+  const edited = recipeReducer(restored, { type: 'edgesChange', changes: [{ type: 'remove', id: ids[0] }] });
+  assert.deepEqual(edited.edges.map(edge => edge.id), ids.slice(1));
+});
+
+test('rejects ambiguous or invalid IDs without replacing the current graph', () => {
+  const state = load(legacyRecipe());
+  for (const invalidNodeId of [0, 7, true, {}, '', '   ', 'cook']) {
+    const file = legacyRecipe();
+    file.nodes[0].id = invalidNodeId;
+    const rejected = load(file, state);
+    assert.match(rejected.error, /unique text ID/);
+    assert.equal(rejected.nodes, state.nodes);
+  }
+  for (const invalidEdgeId of ['cut-cook', 1, false, '', '   ']) {
+    const file = legacyRecipe();
+    file.edges.push({ id: invalidEdgeId, source: 'cook', target: 'dish' });
+    const rejected = load(file, state);
+    assert.match(rejected.error, /connection IDs/);
+    assert.equal(rejected.edges, state.edges);
+  }
+});
+
 test('an edited duration moves its dependent and survives successive file round trips', () => {
   const initial = load(legacyRecipe());
   const edited = recipeReducer(initial, { type: 'edit', id: 'cut', label: 'Dice carrots', durationMinutes: 6.5 });
