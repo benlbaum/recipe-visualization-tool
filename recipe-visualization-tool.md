@@ -11,18 +11,18 @@ The Recipe Visualization Tool is an innovative web-based application designed to
 The core of the tool is a React-based interface utilizing the ReactFlow library to create a dynamic, node-based representation of recipes. The visualization consists of three main elements:
 
 - **Ingredient Nodes**: Represented as yellow rectangles, these nodes contain individual ingredients required for the recipe.
-- **Step Nodes**: Displayed as light blue rectangles, these nodes describe each step in the cooking process, including the estimated time for completion.
+- **Step Nodes**: Each blue bar spans a step's duration on the minute ruler. Its caption shows the description, start minute, finish minute, and duration.
 - **Final Dish Node**: A green rectangle representing the completed dish, serving as the culmination of the recipe.
 
-These nodes are interconnected by edges, illustrating the flow and dependencies within the recipe. A key feature of the visualization is the implicit timeline represented by the X-axis. The horizontal placement of nodes corresponds to the chronological order of steps in the recipe. This allows users to quickly grasp the overall flow and timing of the recipe at a glance.
+Steps with no preceding step start at minute zero. A step with several prerequisites starts when the last prerequisite finishes. Steps can run in parallel and share the same horizontal time scale. The total cooking time is the finish time of the longest dependency chain.
 
 ### 2. Node Management and Temporal Positioning
 
 Users can interact with the graph in several ways:
 
 - **Adding Nodes**: Through input fields, users can add new ingredients, steps, and a final dish to the graph.
-- **Editing Nodes**: Right-clicking on a node opens a context menu, allowing users to edit the node's content or delete it entirely.
-- **Dragging Nodes**: Nodes can be repositioned on the canvas, with steps automatically snapping to predefined columns. This column-snapping feature reinforces the timeline aspect of the visualization, ensuring that steps are clearly organized in chronological order.
+- **Editing Nodes**: Right-click a node to edit or delete it. Changing a step's duration recalculates the start and finish times of the steps that depend on it.
+- **Dragging Nodes**: Drag vertically to choose a row. The timeline keeps each step aligned to its start time and makes room for overlapping bars and captions.
 
 The ability to easily reposition nodes allows users to optimize the recipe workflow, potentially identifying opportunities for parallel tasks or preparation steps that can be done in advance.
 
@@ -32,7 +32,7 @@ Users can create connections between nodes by clicking and dragging from one nod
 
 ### 4. Export and Import
 
-The tool supports exporting the entire recipe graph as a JSON file, which can be later imported to reconstruct the visualization. This feature facilitates easy sharing and storage of recipe visualizations.
+The tool exports the recipe graph as JSON, including step durations and preferred rows. When importing older files, it reads durations from labels such as `Simmer (5 min)`. A step with no usable duration starts with an editable duration of one minute. Imports open with the cooking steps in view. Use Fit View to see the full ingredient list.
 
 ### 5. Integration with Traditional Recipe Formats
 
@@ -51,21 +51,19 @@ By combining the visual graph with traditional text-based instructions, the tool
 
 2. **Ingredient Quantity Visualization**: Enhance ingredient nodes to visually represent quantities.
 
-3. **Enhanced Time-based Step Arrangement**: Improve the timeline representation with more granular displays and automatic arrangement based on duration and dependencies.
+3. **Multi-recipe Visualization**: Support visualization of multiple recipes simultaneously.
 
-4. **Multi-recipe Visualization**: Support visualization of multiple recipes simultaneously.
+4. **Ingredient Substitution Suggestions**: Integrate a system for suggesting alternative ingredients.
 
-5. **Ingredient Substitution Suggestions**: Integrate a system for suggesting alternative ingredients.
+5. **Interactive Cooking Mode**: Develop a mode that guides users through the cooking process in real-time.
 
-6. **Interactive Cooking Mode**: Develop a mode that guides users through the cooking process in real-time.
+6. **Recipe Scaling**: Implement dynamic recipe scaling functionality.
 
-7. **Recipe Scaling**: Implement dynamic recipe scaling functionality.
+7. **Nutritional Information Integration**: Incorporate and visualize nutritional data.
 
-8. **Nutritional Information Integration**: Incorporate and visualize nutritional data.
+8. **Collaborative Editing**: Enable real-time collaborative editing of recipe graphs.
 
-9. **Collaborative Editing**: Enable real-time collaborative editing of recipe graphs.
-
-10. **Version Control and Recipe Evolution**: Implement a system to track changes to recipes over time.
+9. **Version Control and Recipe Evolution**: Implement a system to track changes to recipes over time.
 
 ## Technical Implementation
 

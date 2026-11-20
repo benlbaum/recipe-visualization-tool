@@ -74,3 +74,37 @@ html, body, #root {
   padding: 0;
   overflow: hidden;
 }
+
+.App {
+  height: 100%;
+}
+
+.timeline-ruler {
+  position: relative;
+  flex: none;
+  height: 28px;
+  overflow: hidden;
+  border-block: 1px solid #ccd3d7;
+  background: #f6f8f9;
+  color: #324650;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-ticks span {
+  position: absolute;
+  bottom: 0;
+  padding: 0 4px 3px;
+  border-left: 1px solid #82959f;
+  white-space: nowrap;
+}
+
+.timeline-ruler strong {
+  position: absolute;
+  right: 0;
+  height: 100%;
+  padding-inline: 10px;
+  display: grid;
+  align-items: center;
+  background: #f6f8f9;
+}
