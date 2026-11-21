@@ -9,6 +9,7 @@
     "dev": "vite",
     "build": "vite build",
     "test": "node --test",
+    "test:ui": "npm run build && node scripts/mobile-ui.cjs",
     "lint": "eslint . --max-warnings 0",
     "preview": "vite preview",
     "electron": "electron .",

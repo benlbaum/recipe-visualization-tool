@@ -64,8 +64,23 @@
   .plan-body { grid-area: 2 / 1 / 3 / -1; }
   .selection-detail { grid-area: 3 / 1 / 4 / -1; max-height: 24dvh; }
 
-  .view-ingredients .ingredient-panel { padding-block: 6px; }
-  .view-ingredients .ingredient-progress { margin: 0 0 3px; }
+  .view-ingredients .ingredient-panel {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    column-gap: 8px;
+    padding: 1px 14px 4px;
+  }
+  .view-ingredients .ingredient-panel-header { display: contents; }
+  .view-ingredients .ingredient-panel h2 { grid-area: 1 / 1; align-self: center; font-size: 24px; }
+  .view-ingredients .ingredient-panel-header .recipe-panel-add { grid-area: 1 / 4; }
+  .view-ingredients .ingredient-progress { grid-area: 1 / 2; margin: 0; }
+  .view-ingredients .ingredient-checklist,
+  .view-ingredients .ingredient-empty,
+  .view-ingredients .ingredient-all-ready { grid-area: 2 / 1 / 3 / -1; }
+  .view-ingredients .ingredient-checklist:empty { display: none; }
+  .view-ingredients .ingredient-actions { grid-area: 3 / 1 / 4 / -1; margin: 0; padding: 0; }
+  .view-ingredients .ingredient-actions:has(> :only-child) { grid-area: 1 / 3; border: 0; }
   .method-panel.cooking-method { padding: 1px 14px 16px; }
   .cook-sheet {
     display: grid;

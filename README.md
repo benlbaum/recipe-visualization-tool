@@ -29,3 +29,5 @@ npm test
 npm run lint
 npm run build
 ```
+
+Run `npm run test:ui` for the phone walkthrough. It builds Mise and tests the stir-fry with touch input in Electron’s Chromium at 568×320 and 390×844. On headless Linux, run it under a display server such as Xvfb.
