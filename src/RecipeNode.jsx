@@ -1,12 +1,10 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Handle, Position, useUpdateNodeInternals } from 'reactflow';
-import {
-  Button, Dialog, DialogActions, DialogContent, DialogTitle,
-  ListItemIcon, Menu, MenuItem, TextField,
-} from '@mui/material';
+import { ListItemIcon, Menu, MenuItem } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
+import EditIcon from '@mui/icons-material/EditOutlined';
+import CheckCircleOutline from '@mui/icons-material/CheckCircleOutline';
 import { MIN_STEP_WIDTH, PIXELS_PER_MINUTE } from './recipeTimeline.js';
 import './RecipeNode.css';
 
@@ -15,13 +13,10 @@ const minutes = new Intl.NumberFormat(undefined, { maximumSignificantDigits: 15 
 
 export default function RecipeNode({ id, data, type, selected }) {
   const [menuPosition, setMenuPosition] = useState(null);
-  const [draft, setDraft] = useState(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const isStep = type === 'step';
-  const barWidth = isStep ? data.durationMinutes * PIXELS_PER_MINUTE : undefined;
+  const barWidth = isStep ? data.durationMinutes * (data.pixelsPerMinute ?? PIXELS_PER_MINUTE) : undefined;
   const lastBarWidth = useRef(barWidth);
-  const duration = Number(draft?.duration);
-  const canSave = draft?.label.trim() && (!isStep || (Number.isFinite(duration) && duration > 0));
 
   // A short bar can change length without changing the measured caption width.
   useLayoutEffect(() => {
@@ -39,23 +34,22 @@ export default function RecipeNode({ id, data, type, selected }) {
 
   function editNode() {
     setMenuPosition(null);
-    setDraft({ label: data.label, duration: data.durationMinutes });
+    data.onRequestEdit(id);
   }
 
-  function saveNode(event) {
-    event.preventDefault();
-    if (canSave) {
-      data.onEdit(id, draft.label.trim(), isStep ? duration : undefined);
-      setDraft(null);
-    }
-  }
+  const editButton = (
+    <button type="button" className="recipe-node__edit nodrag nopan nokey"
+      aria-label={`Edit ${data.label}`} title={`Edit ${names[type]}`}
+      onClick={event => { event.stopPropagation(); editNode(); }}>
+      <EditIcon />
+    </button>
+  );
 
   return (
     <>
       <div
         className={`recipe-node recipe-node--${type}${selected ? ' recipe-node--selected' : ''}`}
         style={{
-          '--node-color': data.background,
           '--bar-width': isStep ? `${barWidth}px` : undefined,
           '--caption-width': `${MIN_STEP_WIDTH}px`,
         }}
@@ -63,27 +57,29 @@ export default function RecipeNode({ id, data, type, selected }) {
       >
         {isStep ? (
           <>
-            <div className="recipe-node__bar">
+            <div className={`recipe-node__bar${barWidth < 18 ? ' recipe-node__bar--short' : ''}`}>
               <Handle type="target" position={Position.Left} />
               <Handle type="source" position={Position.Right} />
             </div>
             <div className="recipe-node__caption">
+              {editButton}
               <strong>{data.label}</strong>
               <div className="recipe-node__time">
-                {minutes.format(data.startMinute)}–{minutes.format(data.endMinute)} min
+                <b>{minutes.format(data.startMinute)}–{minutes.format(data.endMinute)} min</b>
                 {' · '}{minutes.format(data.durationMinutes)} min long
               </div>
             </div>
           </>
         ) : (
           <>
+            {editButton}
             <strong>{data.label}</strong>
             {type === 'ingredient' && <Handle type="source" position={Position.Right} />}
             {type === 'finalDish' && (
               <>
                 <Handle type="target" position={Position.Left} />
                 {Number.isFinite(data.endMinute) && (
-                  <div className="recipe-node__time">Ready at {minutes.format(data.endMinute)} min</div>
+                  <div className="recipe-node__time"><CheckCircleOutline />Ready at {minutes.format(data.endMinute)} min</div>
                 )}
               </>
             )}
@@ -106,40 +102,6 @@ export default function RecipeNode({ id, data, type, selected }) {
           </MenuItem>
         </Menu>
       )}
-      {draft && (
-        <Dialog
-          open
-          className="nokey"
-          onClose={() => setDraft(null)}
-          aria-labelledby={`edit-title-${id}`}
-          fullWidth
-          maxWidth="xs"
-        >
-          <form onSubmit={saveNode}>
-            <DialogTitle id={`edit-title-${id}`}>Edit {names[type]}</DialogTitle>
-            <DialogContent>
-              <TextField
-                autoFocus required fullWidth margin="dense"
-                label={isStep ? 'Step description' : 'Name'}
-                value={draft.label}
-                onChange={event => setDraft({ ...draft, label: event.target.value })}
-              />
-              {isStep && (
-                <TextField
-                  required fullWidth margin="dense" type="number" label="Duration (minutes)"
-                  inputProps={{ min: 0, step: 'any' }}
-                  value={draft.duration}
-                  onChange={event => setDraft({ ...draft, duration: event.target.value })}
-                />
-              )}
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setDraft(null)}>Cancel</Button>
-              <Button type="submit" variant="contained" disabled={!canSave}>Save</Button>
-            </DialogActions>
-          </form>
-        </Dialog>
-      )}
     </>
   );
 }
@@ -150,11 +112,11 @@ RecipeNode.propTypes = {
   selected: PropTypes.bool,
   data: PropTypes.shape({
     label: PropTypes.string.isRequired,
-    background: PropTypes.string,
     durationMinutes: PropTypes.number,
+    pixelsPerMinute: PropTypes.number,
     startMinute: PropTypes.number,
     endMinute: PropTypes.number,
-    onEdit: PropTypes.func.isRequired,
+    onRequestEdit: PropTypes.func.isRequired,
     onDelete: PropTypes.func.isRequired,
   }).isRequired,
 };

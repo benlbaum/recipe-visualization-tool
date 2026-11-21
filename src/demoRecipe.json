@@ -4,7 +4,7 @@
         "id": "ing-1724614386913",
         "type": "ingredient",
         "data": {
-          "label": "2 Tbsp Unsalted Butter",
+          "label": "2 tbsp unsalted butter",
           "background": "#F0E68C"
         },
         "position": {
@@ -24,7 +24,7 @@
         "id": "ing-1724614396851",
         "type": "ingredient",
         "data": {
-          "label": "3 Tbsp AP Flour",
+          "label": "3 tbsp all-purpose flour",
           "background": "#F0E68C"
         },
         "position": {
@@ -44,7 +44,7 @@
         "id": "ing-1724614407389",
         "type": "ingredient",
         "data": {
-          "label": "3/4 Cup Whole Milk",
+          "label": "3/4 cup whole milk",
           "background": "#F0E68C"
         },
         "position": {
@@ -64,7 +64,7 @@
         "id": "ing-1724614444476",
         "type": "ingredient",
         "data": {
-          "label": "2/3 Cup Beer",
+          "label": "2/3 cup beer",
           "background": "#F0E68C"
         },
         "position": {
@@ -84,7 +84,7 @@
         "id": "ing-1724614453468",
         "type": "ingredient",
         "data": {
-          "label": "1 Tsp Worcestershire Sauce",
+          "label": "1 tsp Worcestershire sauce",
           "background": "#F0E68C"
         },
         "position": {
@@ -104,7 +104,7 @@
         "id": "ing-1724614462309",
         "type": "ingredient",
         "data": {
-          "label": "1 Tsp Dijon Mustard",
+          "label": "1 tsp Dijon mustard",
           "background": "#F0E68C"
         },
         "position": {
@@ -124,7 +124,7 @@
         "id": "ing-1724614475862",
         "type": "ingredient",
         "data": {
-          "label": "1/2 Tsp Garlic Powder",
+          "label": "1/2 tsp garlic powder",
           "background": "#F0E68C"
         },
         "position": {
@@ -144,7 +144,7 @@
         "id": "ing-1724614488095",
         "type": "ingredient",
         "data": {
-          "label": "1/4 Tsp Smoked Paprika",
+          "label": "1/4 tsp smoked paprika",
           "background": "#F0E68C"
         },
         "position": {
@@ -164,7 +164,7 @@
         "id": "ing-1724614495482",
         "type": "ingredient",
         "data": {
-          "label": "1/4 Tsp Salt",
+          "label": "1/4 tsp salt",
           "background": "#F0E68C"
         },
         "position": {
@@ -184,7 +184,7 @@
         "id": "ing-1724614513415",
         "type": "ingredient",
         "data": {
-          "label": "2.5 Cups Shredded Sharp Cheddar Cheese",
+          "label": "2.5 cups shredded sharp cheddar cheese",
           "background": "#F0E68C"
         },
         "position": {
@@ -204,7 +204,7 @@
         "id": "step-1724614546393",
         "type": "step",
         "data": {
-          "label": "Shred Cheese (1 min)",
+          "label": "Shred the cheddar (1 min)",
           "background": "#ADD8E6"
         },
         "position": {
@@ -224,7 +224,7 @@
         "id": "step-1724614592526",
         "type": "step",
         "data": {
-          "label": "Melt in Medium Saucepan over Medium Heat (1 min)",
+          "label": "Melt the butter in a medium saucepan over medium heat (1 min)",
           "background": "#ADD8E6"
         },
         "position": {
@@ -244,7 +244,7 @@
         "id": "step-1724614632588",
         "type": "step",
         "data": {
-          "label": "Whisk Together Until Slightly Thickened (2 min)",
+          "label": "Whisk in the flour until slightly thickened (2 min)",
           "background": "#ADD8E6"
         },
         "position": {
@@ -264,7 +264,7 @@
         "id": "step-1724614696931",
         "type": "step",
         "data": {
-          "label": "Whisk In as a Slow and Steady Stream (3 min)",
+          "label": "Whisk in the milk in a slow, steady stream (3 min)",
           "background": "#ADD8E6"
         },
         "position": {
@@ -284,7 +284,7 @@
         "id": "step-1724614856182",
         "type": "step",
         "data": {
-          "label": "Whisk In One at A Time (4 min)",
+          "label": "Whisk in the beer and seasonings one at a time (4 min)",
           "background": "#ADD8E6"
         },
         "position": {
@@ -304,7 +304,7 @@
         "id": "step-1724615009608",
         "type": "step",
         "data": {
-          "label": "Slowing Fold In Until Fully Incorporated (5 min)",
+          "label": "Slowly fold in the cheddar until fully incorporated (5 min)",
           "background": "#ADD8E6"
         },
         "position": {
@@ -492,7 +492,7 @@
         "id": "ing-1724614386913",
         "type": "ingredient",
         "data": {
-          "label": "2 Tbsp Unsalted Butter",
+          "label": "2 tbsp unsalted butter",
           "background": "#F0E68C"
         },
         "position": {
@@ -512,7 +512,7 @@
         "id": "ing-1724614396851",
         "type": "ingredient",
         "data": {
-          "label": "3 Tbsp AP Flour",
+          "label": "3 tbsp all-purpose flour",
           "background": "#F0E68C"
         },
         "position": {
@@ -532,7 +532,7 @@
         "id": "ing-1724614407389",
         "type": "ingredient",
         "data": {
-          "label": "3/4 Cup Whole Milk",
+          "label": "3/4 cup whole milk",
           "background": "#F0E68C"
         },
         "position": {
@@ -552,7 +552,7 @@
         "id": "ing-1724614444476",
         "type": "ingredient",
         "data": {
-          "label": "2/3 Cup Beer",
+          "label": "2/3 cup beer",
           "background": "#F0E68C"
         },
         "position": {
@@ -572,7 +572,7 @@
         "id": "ing-1724614453468",
         "type": "ingredient",
         "data": {
-          "label": "1 Tsp Worcestershire Sauce",
+          "label": "1 tsp Worcestershire sauce",
           "background": "#F0E68C"
         },
         "position": {
@@ -592,7 +592,7 @@
         "id": "ing-1724614462309",
         "type": "ingredient",
         "data": {
-          "label": "1 Tsp Dijon Mustard",
+          "label": "1 tsp Dijon mustard",
           "background": "#F0E68C"
         },
         "position": {
@@ -612,7 +612,7 @@
         "id": "ing-1724614475862",
         "type": "ingredient",
         "data": {
-          "label": "1/2 Tsp Garlic Powder",
+          "label": "1/2 tsp garlic powder",
           "background": "#F0E68C"
         },
         "position": {
@@ -632,7 +632,7 @@
         "id": "ing-1724614488095",
         "type": "ingredient",
         "data": {
-          "label": "1/4 Tsp Smoked Paprika",
+          "label": "1/4 tsp smoked paprika",
           "background": "#F0E68C"
         },
         "position": {
@@ -652,7 +652,7 @@
         "id": "ing-1724614495482",
         "type": "ingredient",
         "data": {
-          "label": "1/4 Tsp Salt",
+          "label": "1/4 tsp salt",
           "background": "#F0E68C"
         },
         "position": {
@@ -672,7 +672,7 @@
         "id": "ing-1724614513415",
         "type": "ingredient",
         "data": {
-          "label": "2.5 Cups Shredded Sharp Cheddar Cheese",
+          "label": "2.5 cups shredded sharp cheddar cheese",
           "background": "#F0E68C"
         },
         "position": {
@@ -694,7 +694,7 @@
         "id": "step-1724614546393",
         "type": "step",
         "data": {
-          "label": "Shred Cheese (1 min)",
+          "label": "Shred the cheddar (1 min)",
           "background": "#ADD8E6"
         },
         "position": {
@@ -714,7 +714,7 @@
         "id": "step-1724614592526",
         "type": "step",
         "data": {
-          "label": "Melt in Medium Saucepan over Medium Heat (1 min)",
+          "label": "Melt the butter in a medium saucepan over medium heat (1 min)",
           "background": "#ADD8E6"
         },
         "position": {
@@ -734,7 +734,7 @@
         "id": "step-1724614632588",
         "type": "step",
         "data": {
-          "label": "Whisk Together Until Slightly Thickened (2 min)",
+          "label": "Whisk in the flour until slightly thickened (2 min)",
           "background": "#ADD8E6"
         },
         "position": {
@@ -754,7 +754,7 @@
         "id": "step-1724614696931",
         "type": "step",
         "data": {
-          "label": "Whisk In as a Slow and Steady Stream (3 min)",
+          "label": "Whisk in the milk in a slow, steady stream (3 min)",
           "background": "#ADD8E6"
         },
         "position": {
@@ -774,7 +774,7 @@
         "id": "step-1724614856182",
         "type": "step",
         "data": {
-          "label": "Whisk In One at A Time (4 min)",
+          "label": "Whisk in the beer and seasonings one at a time (4 min)",
           "background": "#ADD8E6"
         },
         "position": {
@@ -794,7 +794,7 @@
         "id": "step-1724615009608",
         "type": "step",
         "data": {
-          "label": "Slowing Fold In Until Fully Incorporated (5 min)",
+          "label": "Slowly fold in the cheddar until fully incorporated (5 min)",
           "background": "#ADD8E6"
         },
         "position": {

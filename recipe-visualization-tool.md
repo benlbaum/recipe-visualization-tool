@@ -10,8 +10,8 @@ The Recipe Visualization Tool is an innovative web-based application designed to
 
 The core of the tool is a React-based interface utilizing the ReactFlow library to create a dynamic, node-based representation of recipes. The visualization consists of three main elements:
 
-- **Ingredient Nodes**: Represented as yellow rectangles, these nodes contain individual ingredients required for the recipe.
-- **Step Nodes**: Each blue bar spans a step's duration on the minute ruler. Its caption shows the description, start minute, finish minute, and duration.
+- **Ingredient Nodes**: The prep checklist shows the ingredients. Turn on **Ingredient links** to see their connections on the timeline.
+- **Step Nodes**: Each green bar spans a step's duration on the minute ruler. Its caption shows the description, start minute, finish minute, and duration.
 - **Final Dish Node**: A green rectangle representing the completed dish, serving as the culmination of the recipe.
 
 Steps with no preceding step start at minute zero. A step with several prerequisites starts when the last prerequisite finishes. Steps can run in parallel and share the same horizontal time scale. The total cooking time is the finish time of the longest dependency chain.
@@ -20,8 +20,8 @@ Steps with no preceding step start at minute zero. A step with several prerequis
 
 Users can interact with the graph in several ways:
 
-- **Adding Nodes**: Through input fields, users can add new ingredients, steps, and a final dish to the graph.
-- **Editing Nodes**: Right-click a node to edit or delete it. Changing a step's duration recalculates the start and finish times of the steps that depend on it.
+- **Adding Nodes**: Name the dish when creating a recipe, then add ingredients and steps from the cooking workspace.
+- **Editing Nodes**: Use the pencil beside an ingredient, step, or recipe title. Each step editor lets you choose ingredients and prerequisite steps. Changing a duration recalculates the start and finish times of dependent steps.
 - **Dragging Nodes**: Drag vertically to choose a row. The timeline keeps each step aligned to its start time and makes room for overlapping bars and captions.
 
 The ability to easily reposition nodes allows users to optimize the recipe workflow, potentially identifying opportunities for parallel tasks or preparation steps that can be done in advance.
@@ -32,7 +32,7 @@ Users can create connections between nodes by clicking and dragging from one nod
 
 ### 4. Export and Import
 
-The tool exports the recipe graph as JSON, including step durations and preferred rows. When importing older files, it reads durations from labels such as `Simmer (5 min)`. A step with no usable duration starts with an editable duration of one minute. Imports open with the cooking steps in view. Use Fit View to see the full ingredient list.
+The recipe box saves drafts and ingredient checks on this device. Exporting a recipe writes its graph, durations, and preferred rows to JSON. Importing adds a recipe to the box. Older files can store durations in labels such as `Simmer (5 min)`. A step with no usable duration starts with an editable duration of one minute.
 
 ### 5. Integration with Traditional Recipe Formats
 

@@ -1,0 +1,167 @@
+.timeline-canvas {
+  --axis-height: 34px;
+  --chart-ink: var(--ink, #20372c);
+  --chart-forest: var(--forest, #234c3e);
+  --chart-paper: var(--canvas, #faf9f3);
+  box-sizing: border-box;
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  color: var(--chart-ink);
+  background: var(--chart-paper);
+  font-family: var(--font-ui, system-ui, sans-serif);
+}
+
+.timeline-canvas__plot {
+  flex: 1;
+  min-height: 0;
+  margin-top: var(--axis-height);
+}
+
+.timeline-scale {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  color: #505e51;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-scale::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--axis-height);
+  border-bottom: 1px solid #d9dccf;
+  background: #f6f5ed;
+  content: '';
+}
+
+.timeline-scale__tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #e1e4d7;
+}
+
+.timeline-scale__tick span {
+  position: absolute;
+  top: 0;
+  left: 6px;
+  display: flex;
+  align-items: center;
+  height: var(--axis-height);
+  white-space: nowrap;
+}
+
+.timeline-scale__tick--finish {
+  width: 0;
+  border-left: 1px dashed #839c7d;
+  background: transparent;
+  color: #294d34;
+  font-weight: 750;
+}
+
+.timeline-canvas .react-flow__edge-path {
+  stroke: #67826f;
+  stroke-width: 1.6;
+}
+
+.timeline-canvas .timeline-edge--linked .react-flow__edge-path,
+.timeline-canvas .react-flow__connection-path {
+  stroke: var(--chart-forest);
+  stroke-width: 3;
+}
+
+.timeline-canvas .react-flow__edge:hover .react-flow__edge-path,
+.timeline-canvas .react-flow__edge.selected .react-flow__edge-path {
+  stroke: #8a4a22;
+  stroke-width: 3.5;
+}
+
+.timeline-neighbor .recipe-node__caption,
+.timeline-neighbor .recipe-node--ingredient {
+  border-color: #71917b;
+}
+
+.timeline-canvas .timeline-controls {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  margin: 12px;
+  padding: 2px;
+  border: 1px solid #cccfc1;
+  border-radius: 8px;
+  background: #fffef8;
+  color: #284638;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.timeline-controls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 5px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.timeline-controls button:not(:disabled):hover {
+  background: #ebeee3;
+}
+
+.timeline-controls button:focus-visible,
+.timeline-canvas .recipe-node__edit:focus-visible {
+  outline: 2px solid #3c7057;
+  outline-offset: 1px;
+}
+
+.timeline-controls button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.timeline-controls button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.timeline-controls__percent {
+  min-width: 32px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-controls button.timeline-controls__fit {
+  margin-left: 2px;
+  padding: 0 8px;
+  border-left: 1px solid #d9ddce;
+  border-radius: 0 5px 5px 0;
+}
+
+.timeline-canvas .react-flow__attribution {
+  background: var(--chart-paper);
+}
+
+@media (pointer: coarse) {
+  .timeline-controls button {
+    min-width: 40px;
+    height: 40px;
+  }
+}

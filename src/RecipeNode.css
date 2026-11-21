@@ -1,26 +1,31 @@
 .recipe-node {
   box-sizing: border-box;
   position: relative;
-  width: 222px;
-  min-height: 72px;
+  width: var(--caption-width);
+  min-height: 58px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 10px;
-  border: 1px solid #655f52;
-  border-radius: 5px;
-  color: #203039;
-  line-height: 1.3;
-  text-align: center;
+  padding: 11px 36px 11px 12px;
+  border: 1px solid #dedfd1;
+  border-radius: 7px;
+  color: var(--chart-ink, #20372c);
+  font-size: 15px;
+  line-height: 1.34;
+  text-align: left;
   overflow-wrap: anywhere;
 }
 
 .recipe-node--ingredient {
-  background: var(--node-color, #f0e68c);
+  border-color: #d1b987;
+  color: #5e471d;
+  background: #f6ead0;
 }
 
 .recipe-node--finalDish {
-  background: var(--node-color, #90ee90);
+  border-color: var(--chart-forest, #234c3e);
+  color: #fffef7;
+  background: var(--chart-forest, #234c3e);
 }
 
 .recipe-node--step {
@@ -35,44 +40,139 @@
 .recipe-node__bar {
   position: relative;
   width: var(--bar-width);
-  height: 14px;
-  border-radius: 3px;
-  background: var(--node-color, #add8e6);
-  box-shadow: inset 0 0 0 1px #447184;
+  height: 12px;
+  border-radius: 4px;
+  background: #387454;
 }
 
 .recipe-node__caption {
+  position: relative;
   box-sizing: border-box;
   width: var(--caption-width);
-  padding: 5px 8px;
-  border-radius: 3px;
-  background: #fff;
+  margin-top: 3px;
+  padding: 7px 10px 8px;
+  border: 1px solid #d9ddcf;
+  border-radius: 6px;
+  background: #fffef9;
+}
+
+.recipe-node__caption strong {
+  display: block;
+  padding-right: 21px;
+}
+
+.recipe-node strong {
+  font-weight: 650;
+}
+
+.recipe-node__edit {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.recipe-node__edit svg {
+  width: 14px;
+  height: 14px;
+}
+
+.recipe-node__edit:hover,
+.recipe-node__edit:focus-visible {
+  background: rgb(92 106 85 / 14%);
+}
+
+.recipe-node--finalDish .recipe-node__edit:hover,
+.recipe-node--finalDish .recipe-node__edit:focus-visible {
+  background: rgb(255 255 255 / 18%);
 }
 
 .recipe-node__time {
   margin-top: 3px;
-  font-size: 0.82rem;
+  color: #586557;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 
+.recipe-node__time b {
+  color: #345b43;
+  font-weight: 600;
+}
+
+.recipe-node--finalDish .recipe-node__time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #e0eadc;
+}
+
+.recipe-node__time svg {
+  width: 14px;
+  height: 14px;
+}
+
 .recipe-node--selected:not(.recipe-node--step),
-.recipe-node--selected .recipe-node__bar {
-  outline: 2px solid #23536b;
+.recipe-node--selected .recipe-node__caption {
+  outline: 2px solid #397151;
   outline-offset: 2px;
 }
 
 .recipe-node .react-flow__handle {
-  width: 9px;
-  height: 9px;
-  background: #263d49;
+  box-sizing: border-box;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid #fdfcf6;
+  background: #234c3e;
 }
 
 .recipe-node .react-flow__handle-left {
   left: 0;
+  border-color: #41664d;
+  background: #fffef8;
   transform: translate(-50%, -50%);
 }
 
 .recipe-node .react-flow__handle-right {
   right: 0;
   transform: translate(50%, -50%);
+}
+
+.recipe-node .react-flow__handle::after {
+  position: absolute;
+  inset: -4px;
+  content: '';
+}
+
+/* Two handles can share a pixel column on a long recipe. Separate them
+   vertically while retaining their exact start and finish on the time axis. */
+.recipe-node__bar--short {
+  height: 18px;
+}
+
+.recipe-node__bar--short .react-flow__handle-left {
+  top: 100%;
+}
+
+.recipe-node__bar--short .react-flow__handle-right {
+  top: 0;
+}
+
+@media (pointer: coarse) {
+  .recipe-node__edit {
+    width: 40px;
+    height: 40px;
+  }
+
+  .recipe-node__caption strong {
+    padding-right: 32px;
+  }
 }

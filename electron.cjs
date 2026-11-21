@@ -4,8 +4,10 @@ const url = require('url');
 
 function createWindow() {
   const win = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1280,
+    height: 840,
+    backgroundColor: '#f6f5ef',
+    autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
@@ -22,8 +24,6 @@ function createWindow() {
       console.error('Failed to load as URL:', e);
     });
   });
-
-  win.webContents.openDevTools();
 
   win.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
     console.error('Failed to load:', errorCode, errorDescription);
