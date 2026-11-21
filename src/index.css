@@ -172,6 +172,7 @@ button svg { flex: none; }
 .form-error { margin-top: 12px; }
 .action.destructive { background: #963a27; color: white; }
 .confirm-text { overflow-wrap: anywhere; }
+.edit-progress-hint { flex: none; padding: 8px 17px; background: #f6edda; color: #624419; font-size: .84rem; }
 .source-choices { border-top: 1px solid var(--rule); }
 .source-choices summary { display: flex; align-items: center; gap: 4px; cursor: pointer; padding: 11px 0; font-size: .88rem; font-weight: 600; }
 .source-choices summary::-webkit-details-marker { display: none; }

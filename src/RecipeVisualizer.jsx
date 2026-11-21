@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { ReactFlowProvider } from 'reactflow';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
 import AddIcon from '@mui/icons-material/Add';
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
@@ -14,16 +15,20 @@ import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
 import CloseIcon from '@mui/icons-material/Close';
 import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
 import demoRecipe from './demoRecipe.json';
+import stirFryRecipe from './stirFryRecipe.json';
 import RecipePhoto from './RecipePhoto.jsx';
 import TimelineCanvas from './TimelineCanvas.jsx';
 import SelectionDetails from './SelectionDetails.jsx';
-import { IngredientsPanel, MethodPanel } from './RecipePanels.jsx';
+import PlanHeader from './PlanHeader.jsx';
+import { IngredientsPanel } from './RecipePanels.jsx';
+import CookingMethod from './CookingMethod.jsx';
 import { ItemEditor, NewRecipeDialog, RecipeBoxDialog, RecipeDialog, PhotoDialog } from './RecipeDialogs.jsx';
 import { boxReducer, listRecipes, makeRecipeBox, serializeRecipeBox } from './recipeBox.js';
 import { exportRecipe, recipeReducer } from './recipeGraph.js';
+import { useReadingChoice, useReadingScroll } from './readingPlace.js';
 
 const storageKey = 'mise.recipe-box.v1';
-const smallScreen = '(max-width: 760px)';
+const smallScreen = '(max-width: 760px), (max-width: 960px) and (max-height: 540px) and (orientation: landscape) and (pointer: coarse)';
 const newId = prefix => `${prefix}-${crypto.randomUUID?.() ?? crypto.getRandomValues(new Uint32Array(2)).join('-')}`;
 
 function readDrafts() {
@@ -35,15 +40,39 @@ function readDrafts() {
   }
 }
 
+function itemChange(node, label, durationMinutes, sources) {
+  const data = { ...node.data, label };
+  if (node.type === 'step') data.durationMinutes = durationMinutes;
+  return { type: 'saveItem', node: { ...node, data }, sources };
+}
+
 function RecipeEditor() {
   const [initial] = useState(readDrafts);
   const [recipe, dispatch] = useReducer(boxReducer, initial.state);
-  const [view, setView] = useState(() => matchMedia(smallScreen).matches ? 'method' : 'timeline');
+  const compact = useMediaQuery(smallScreen, { noSsr: true });
+  const place = `mise.read.${recipe.activeId}.${compact ? 'compact' : 'wide'}`;
+  const [readingView, setReadingView] = useReadingChoice(place + '.view', compact ? 'method' : 'timeline');
+  const [expandedView, setExpandedView] = useReadingChoice(place + '.expanded', 'no');
+  const expanded = expandedView !== 'no';
+  const view = expanded ? expandedView : readingView;
+  function setView(next) {
+    if (expanded) setExpandedView(next);
+    // The wide workspace shows ingredients in its sidebar. Returning to it
+    // restores the cook's last method or timeline alongside that checklist.
+    if (compact || next !== 'ingredients') setReadingView(next);
+  }
+  const toggleExpanded = useCallback(() => setExpandedView(expanded ? 'no' : readingView),
+    [expanded, readingView, setExpandedView]);
+  const [filter, setFilter] = useReadingChoice(place + '.steps', 'all');
+  const methodScroll = useReadingScroll(place + '.method.' + filter);
+  const [prepFilter, setPrepFilter] = useReadingChoice(place + '.prepFilter', 'all');
+  const ingredientScroll = useReadingScroll(place + '.ingredients.' + prepFilter);
   const [showIngredients, setShowIngredients] = useState(false);
   const [modal, setModal] = useState(null);
   const [removal, setRemoval] = useState(null);
   const [saveWarning, setSaveWarning] = useState('');
   const fileInput = useRef(null);
+  const methodButton = useRef(null);
   const lastSaved = useRef(initial.raw);
   const dish = recipe.nodes.find(node => node.type === 'finalDish');
   const title = dish?.data.label || 'Untitled recipe';
@@ -52,11 +81,12 @@ function RecipeEditor() {
   const selected = recipe.nodes.filter(node => node.selected && (showIngredients || node.type !== 'ingredient'));
   const total = steps.reduce((end, node) => Math.max(end, node.data.endMinute), 0);
   const checkedIds = useMemo(() => new Set(recipe.checkedIds), [recipe.checkedIds]);
+  const completed = useMemo(() => new Set(recipe.completedStepIds), [recipe.completedStepIds]);
   const openEditor = useCallback(id => setModal({ screen: 'edit', id }), []);
   const askDelete = useCallback((id, ids = [id]) => setRemoval({ ids }), []);
   const nodes = useMemo(() => recipe.nodes.map(node => ({
-    ...node, data: { ...node.data, onRequestEdit: openEditor, onDelete: askDelete },
-  })), [recipe.nodes, openEditor, askDelete]);
+    ...node, data: { ...node.data, done: completed.has(node.id), onRequestEdit: openEditor, onDelete: askDelete },
+  })), [recipe.nodes, completed, openEditor, askDelete]);
   const onNodesChange = useCallback(changes => dispatch({ type: 'nodesChange', changes }), []);
   const onEdgesChange = useCallback(changes => dispatch({ type: 'edgesChange', changes }), []);
   const onConnect = useCallback(connection => dispatch({ type: 'connect', connection }), []);
@@ -66,12 +96,6 @@ function RecipeEditor() {
   const editingType = editing?.type ?? modal?.type;
 
   useEffect(() => { document.title = `${title} · Mise`; }, [title]);
-  useEffect(() => {
-    const query = matchMedia(smallScreen);
-    const resize = () => { if (!query.matches) setView(current => current === 'ingredients' ? 'method' : current); };
-    query.addEventListener('change', resize);
-    return () => query.removeEventListener('change', resize);
-  }, []);
   useEffect(() => {
     if (recipe.storageBlocked || recipe.nodes.some(node => node.dragging)) return;
     try {
@@ -99,9 +123,7 @@ function RecipeEditor() {
       return;
     }
     const node = editing ?? { id: newId(type), type };
-    const data = { ...node.data, label };
-    if (type === 'step') data.durationMinutes = durationMinutes;
-    const action = { type: 'saveItem', node: { ...node, data }, sources };
+    const action = itemChange(node, label, durationMinutes, sources);
     const result = recipeReducer(recipe, action);
     if (result.error) return result.error;
     dispatch(action);
@@ -139,8 +161,26 @@ function RecipeEditor() {
     close();
   }
 
-  const ingredientPanel = <IngredientsPanel nodes={recipe.nodes} checkedIds={checkedIds}
-    onToggle={id => dispatch({ type: 'checkIngredient', id })} onReset={() => dispatch({ type: 'resetPrep' })}
+  function toggleStep(id) {
+    const action = { type: 'toggleStepDone', id };
+    if (completed.has(id)) {
+      const reopened = completed.size - boxReducer(recipe, action).completedStepIds.length;
+      if (reopened > 1) {
+        const name = recipe.nodes.find(node => node.id === id).data.label;
+        setModal({ screen: 'progress', title: 'Reopen these steps?', action, confirm: 'Reopen steps',
+          message: `Marking “${name}” unfinished also reopens ${reopened - 1} completed ${reopened === 2 ? 'step that depends' : 'steps that depend'} on it.` });
+        return;
+      }
+    }
+    dispatch(action);
+  }
+
+  const ingredientPanel = <IngredientsPanel key={recipe.activeId} nodes={recipe.nodes} checkedIds={checkedIds} scrollRef={ingredientScroll}
+    neededOnly={prepFilter === 'needed'} onNeededChange={value => setPrepFilter(value ? 'needed' : 'all')}
+    onToggle={id => dispatch({ type: 'checkIngredient', id })} onReset={() => setModal({ screen: 'progress',
+      title: 'Uncheck gathered ingredients?', confirm: 'Uncheck all', action: { type: 'resetPrep' },
+      message: `Clear ${checkedIds.size} gathered ${checkedIds.size === 1 ? 'ingredient' : 'ingredients'} for this recipe?` })}
+    onCook={compact || expanded ? () => { setView('method'); methodButton.current?.focus(); } : undefined}
     onAdd={() => add('ingredient')} onEdit={openEditor} />;
   const localWarning = saveWarning || (recipe.storageBlocked ? 'Local saving is unavailable. Export your recipe to keep a copy.' : '');
   return (
@@ -187,14 +227,13 @@ function RecipeEditor() {
           {recipe.error && <button className="icon-button" aria-label="Dismiss message"
             onClick={() => dispatch({ type: 'error', message: '' })}><CloseIcon /></button>}</div>}
         <div className="workspace-grid">
-          <aside className="prep-sidebar">{ingredientPanel}</aside>
-          <section className="plan-panel" aria-label="Cooking plan">
-            <header className="plan-header"><h2>Cooking plan</h2>
-              <button className="action primary" onClick={() => add('step')}><AddIcon />Add step</button></header>
+          {!compact && !expanded && <aside className="prep-sidebar">{ingredientPanel}</aside>}
+          <section id="cooking-plan" className="plan-panel" aria-label="Cooking plan">
+            <PlanHeader title={title} expanded={expanded} onToggleExpanded={toggleExpanded} onAdd={() => add('step')} />
             <div className="plan-toolbar">
               <div className="view-switch" role="group" aria-label="Cooking plan view">
                 <button aria-pressed={view === 'timeline'} onClick={() => setView('timeline')}><ViewTimelineOutlinedIcon />Timeline</button>
-                <button aria-pressed={view === 'method'} onClick={() => setView('method')}><FormatListNumberedIcon />Method</button>
+                <button ref={methodButton} aria-pressed={view === 'method'} onClick={() => setView('method')}><FormatListNumberedIcon />Method</button>
                 <button className="mobile-ingredients" aria-pressed={view === 'ingredients'} onClick={() => setView('ingredients')}>
                   <ChecklistRoundedIcon />Ingredients</button>
               </div>
@@ -204,7 +243,12 @@ function RecipeEditor() {
             </div>
             <div className={'plan-body view-' + view}>
               {view === 'ingredients' ? ingredientPanel : view === 'method'
-                ? <MethodPanel nodes={recipe.nodes} edges={recipe.edges} onEdit={openEditor} onAdd={() => add('step')} />
+                ? <CookingMethod key={recipe.activeId} nodes={recipe.nodes} edges={recipe.edges}
+                  completedStepIds={recipe.completedStepIds} onToggleStep={toggleStep}
+                  readyOnly={filter === 'ready'} onReadyOnlyChange={value => setFilter(value ? 'ready' : 'all')}
+                  scrollRef={methodScroll} onEdit={openEditor} onAdd={() => add('step')}
+                  onResetSteps={() => setModal({ screen: 'progress', title: 'Restart cooking?', confirm: 'Restart cooking',
+                    action: { type: 'resetCooking' }, message: 'Clear the completed steps for this recipe? Your gathered ingredients stay checked.' })} />
                 : steps.length || (showIngredients && ingredients.length)
                   ? <TimelineCanvas nodes={nodes} edges={recipe.edges} onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange} onConnect={onConnect} version={recipe.importVersion} showIngredients={showIngredients} />
@@ -213,7 +257,9 @@ function RecipeEditor() {
                     <button className="action secondary" onClick={() => add('step')}><AddIcon />Add first step</button></div>}
             </div>
             {view === 'timeline' && selected.length === 1 && <SelectionDetails node={selected[0]} nodes={recipe.nodes}
-              edges={recipe.edges} onEdit={openEditor}
+              edges={recipe.edges} onEdit={openEditor} onNavigate={id => onNodesChange(recipe.nodes
+                .filter(node => Boolean(node.selected) !== (node.id === id))
+                .map(node => ({ type: 'select', id: node.id, selected: node.id === id })))}
               onClose={() => onNodesChange([{ type: 'select', id: selected[0].id, selected: false }])} />}
           </section>
         </div>
@@ -221,14 +267,24 @@ function RecipeEditor() {
           <span>{view === 'timeline' ? 'Drag between handles to connect steps.' : ''}</span></footer>
       </main>
       {modal?.screen === 'edit' && editingType && <ItemEditor key={editing?.id ?? editingType} type={editingType}
-        node={editing} nodes={recipe.nodes} edges={recipe.edges} onSave={saveNode} onClose={close} onDelete={askDelete} />}
+        node={editing} nodes={recipe.nodes} edges={recipe.edges} onSave={saveNode} onClose={close} onDelete={askDelete}
+        countReopened={editing && completed.size ? (label, duration, sources) =>
+          completed.size - boxReducer(recipe, itemChange(editing, label, duration, sources)).completedStepIds.length : undefined} />}
       {modal?.screen === 'new' && <NewRecipeDialog onClose={close} onCreate={createRecipe} />}
+      {modal?.screen === 'progress' && <RecipeDialog title={modal.title} onClose={close}>
+        <div className="dialog-body"><p className="confirm-text">{modal.message}</p></div>
+        <footer className="dialog-actions"><button className="action secondary" autoFocus onClick={close}>Cancel</button>
+          <button className="action primary" onClick={() => { dispatch(modal.action); close(); }}>{modal.confirm}</button>
+        </footer></RecipeDialog>}
       {modal?.screen === 'photo' && <PhotoDialog cover={recipe.cover} onClose={close}
         onSave={cover => { dispatch({ type: 'setCover', cover }); close(); }} />}
       {modal?.screen === 'box' && <RecipeBoxDialog entries={listRecipes(recipe)} activeId={recipe.activeId} onClose={close}
         onOpen={id => { dispatch({ type: 'openRecipe', id }); close(); }} onImport={() => fileInput.current.click()}
         onRemove={entry => setRemoval({ entry })}
-        onExample={() => { dispatch({ type: 'insertRecipe', id: newId('recipe'), file: demoRecipe, cover: 'beer-cheese' }); close(); }} />}
+        onExample={cover => {
+          dispatch({ type: 'insertRecipe', id: newId('recipe'), file: cover === 'beer-cheese' ? demoRecipe : stirFryRecipe, cover });
+          close();
+        }} />}
       {removal && <RecipeDialog title={removal.entry ? 'Remove recipe?' : removal.ids.length === 1 ? 'Delete item?' : 'Delete selected items?'}
         onClose={() => setRemoval(null)}>
         <div className="dialog-body"><p className="confirm-text">{removal.entry

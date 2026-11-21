@@ -8,7 +8,7 @@ import AddRounded from '@mui/icons-material/AddRounded';
 import RemoveRounded from '@mui/icons-material/RemoveRounded';
 import FitScreenOutlined from '@mui/icons-material/FitScreenOutlined';
 import RecipeNode from './RecipeNode.jsx';
-import { layoutRecipe, MIN_STEP_WIDTH, PIXELS_PER_MINUTE } from './recipeTimeline.js';
+import { getStepNames, layoutRecipe, MIN_STEP_WIDTH, PIXELS_PER_MINUTE } from './recipeTimeline.js';
 import 'reactflow/dist/style.css';
 import './TimelineCanvas.css';
 
@@ -95,7 +95,7 @@ function useChartScale(nodes, total, width, height, version, showIngredients, fi
       top = Math.min(top, node.position.y);
       bottom = Math.max(bottom, node.position.y + (node.height || 100));
     }
-    const overviewZoom = Math.max(0.78, Math.min(1.02, (height - 62) / Math.max(1, bottom - top)));
+    const overviewZoom = Math.max(0.86, Math.min(1.02, (height - 62) / Math.max(1, bottom - top)));
     const available = Math.max(240, (width - 56) / overviewZoom - MIN_STEP_WIDTH - (showIngredients ? 300 : 0));
     setScale(total ? Math.min(180, available / total) : PIXELS_PER_MINUTE);
     lastFrame.current = { width, version, showIngredients, fitRequest, hadSteps: total > 0 };
@@ -151,7 +151,7 @@ function FrameRecipe({ version, showIngredients, pixelsPerMinute, fitRequest }) 
       const padding = width < 600 ? 18 : 28;
       // On narrow screens keep text at reading size and allow the cook to pan.
       // The Fit control remains available for an overview of a large recipe.
-      const zoom = Math.max(width < 600 ? 0.9 : 0.72, Math.min(1.12, (width - 2 * padding) / bounds.width,
+      const zoom = Math.max(width < 600 ? 0.9 : 0.86, Math.min(1.12, (width - 2 * padding) / bounds.width,
         (height - 18 - 44) / bounds.height));
       setViewport({ x: padding - bounds.x * zoom, y: 18 - bounds.y * zoom, zoom });
     }
@@ -179,22 +179,36 @@ export default function TimelineCanvas({
   const pixelsPerMinute = useChartScale(nodes, total, width, height, version, showIngredients, fitRequest);
   const { visibleNodes, visibleEdges } = useMemo(() => {
     const shown = showIngredients ? nodes : nodes.filter(node => node.type !== 'ingredient');
-    const ids = new Set(shown.map(node => node.id));
+    const stepNames = getStepNames(shown);
+    const names = new Set();
+    const repeated = new Set();
+    for (const node of shown) {
+      if (names.has(node.data.label)) repeated.add(node.data.label);
+      names.add(node.data.label);
+    }
+    const references = new Map(shown.map(node => [node.id, stepNames.get(node.id) ?? node.data.label]));
     const selected = new Set(shown.filter(node => node.selected).map(node => node.id));
     const neighbors = new Set();
-    const visibleEdges = edges.filter(edge => ids.has(edge.source) && ids.has(edge.target)).map(edge => {
+    const visibleEdges = edges.filter(edge => references.has(edge.source) && references.has(edge.target)).map(edge => {
       const linked = selected.has(edge.source) || selected.has(edge.target);
-      if (!linked && !edge.selected) return edge;
-      neighbors.add(edge.source);
-      neighbors.add(edge.target);
-      return { ...edge, className: `${edge.className ?? ''} timeline-edge--linked` };
+      if (linked || edge.selected) {
+        neighbors.add(edge.source);
+        neighbors.add(edge.target);
+      }
+      return {
+        ...edge,
+        ariaLabel: edge.ariaLabel === undefined ? `${references.get(edge.source)} leads to ${references.get(edge.target)}` : edge.ariaLabel,
+        className: linked || edge.selected ? `${edge.className ?? ''} timeline-edge--linked` : edge.className,
+      };
     });
     const visibleNodes = layoutRecipe(shown, visibleEdges, pixelsPerMinute).map((node, index) => ({
       ...node,
+      ariaLabel: node.ariaLabel ?? `${references.get(node.id)}${node.data.done ? ', completed' : ''}`,
       // A drag supplies live y coordinates until its row is saved on release.
       position: node.dragging ? { ...node.position, y: shown[index].position.y } : node.position,
       className: neighbors.has(node.id) ? `${node.className ?? ''} timeline-neighbor` : node.className,
-      data: { ...node.data, pixelsPerMinute },
+      data: { ...node.data, pixelsPerMinute,
+        editLabel: repeated.has(node.data.label) ? references.get(node.id) : node.data.label },
     }));
     return { visibleNodes, visibleEdges };
   }, [nodes, edges, showIngredients, pixelsPerMinute]);

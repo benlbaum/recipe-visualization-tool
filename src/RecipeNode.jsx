@@ -5,7 +5,7 @@ import { ListItemIcon, Menu, MenuItem } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/EditOutlined';
 import CheckCircleOutline from '@mui/icons-material/CheckCircleOutline';
-import { MIN_STEP_WIDTH, PIXELS_PER_MINUTE } from './recipeTimeline.js';
+import { formatStepInterval, MIN_STEP_WIDTH, PIXELS_PER_MINUTE } from './recipeTimeline.js';
 import './RecipeNode.css';
 
 const names = { ingredient: 'ingredient', step: 'step', finalDish: 'final dish' };
@@ -39,7 +39,7 @@ export default function RecipeNode({ id, data, type, selected }) {
 
   const editButton = (
     <button type="button" className="recipe-node__edit nodrag nopan nokey"
-      aria-label={`Edit ${data.label}`} title={`Edit ${names[type]}`}
+      aria-label={`Edit ${data.editLabel ?? data.label}`} title={`Edit ${names[type]}`}
       onClick={event => { event.stopPropagation(); editNode(); }}>
       <EditIcon />
     </button>
@@ -63,9 +63,9 @@ export default function RecipeNode({ id, data, type, selected }) {
             </div>
             <div className="recipe-node__caption">
               {editButton}
-              <strong>{data.label}</strong>
+              <strong>{data.done && <CheckCircleOutline className="recipe-node__done" titleAccess="Completed" />}{data.label}</strong>
               <div className="recipe-node__time">
-                <b>{minutes.format(data.startMinute)}–{minutes.format(data.endMinute)} min</b>
+                <b>{formatStepInterval({ data })}</b>
                 {' · '}{minutes.format(data.durationMinutes)} min long
               </div>
             </div>
@@ -112,6 +112,8 @@ RecipeNode.propTypes = {
   selected: PropTypes.bool,
   data: PropTypes.shape({
     label: PropTypes.string.isRequired,
+    editLabel: PropTypes.string,
+    done: PropTypes.bool,
     durationMinutes: PropTypes.number,
     pixelsPerMinute: PropTypes.number,
     startMinute: PropTypes.number,

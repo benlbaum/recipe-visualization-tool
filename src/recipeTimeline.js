@@ -1,7 +1,8 @@
 export const PIXELS_PER_MINUTE = 44;
 export const MIN_STEP_WIDTH = 210;
 
-const NODE_GAP = 24;
+const COLUMN_GAP = 16;
+const ROW_GAP = 20;
 const DURATION_SUFFIX = /\s*\((\d+(?:\.\d+)?(?:e[+-]?\d+)?)\s*min(?:ute)?s?\)\s*$/i;
 const minutes = new Intl.NumberFormat(undefined, { maximumSignificantDigits: 15 });
 
@@ -94,9 +95,9 @@ function placeRows(boxes) {
   for (const box of byPriority) {
     let y = Number.isFinite(box.preferredY) ? box.preferredY : 0;
     for (const other of placed) {
-      if (box.x >= other.right + NODE_GAP || other.x >= box.right + NODE_GAP) continue;
-      if (y + box.height + NODE_GAP <= other.y) break;
-      y = Math.max(y, other.y + other.height + NODE_GAP);
+      if (box.x >= other.right + COLUMN_GAP || other.x >= box.right + COLUMN_GAP) continue;
+      if (y + box.height + ROW_GAP <= other.y) break;
+      y = Math.max(y, other.y + other.height + ROW_GAP);
     }
     box.y = y;
     const below = placed.findIndex(other => other.y > y);

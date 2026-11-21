@@ -9,6 +9,7 @@ import FileOpenOutlinedIcon from '@mui/icons-material/FileOpenOutlined';
 import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined';
 import RecipePhoto from './RecipePhoto.jsx';
 import { prepareRecipePhoto } from './recipePhoto.js';
+import { getStepNames } from './recipeTimeline.js';
 
 export function RecipeDialog({ title, onClose, children }) {
   const heading = useId();
@@ -24,7 +25,7 @@ export function RecipeDialog({ title, onClose, children }) {
 }
 RecipeDialog.propTypes = { title: PropTypes.string.isRequired, onClose: PropTypes.func.isRequired, children: PropTypes.node };
 
-function SourceChoices({ title, choices, selected, onToggle }) {
+function SourceChoices({ title, choices, selected, onToggle, stepNames }) {
   if (!choices.length) return null;
   const count = choices.filter(node => selected.has(node.id)).length;
   return (
@@ -34,7 +35,7 @@ function SourceChoices({ title, choices, selected, onToggle }) {
         <label key={node.id}>
           <input type="checkbox" checked={selected.has(node.id)} onChange={() => onToggle(node.id)} />
           <span>{node.data.label}</span>
-          {node.type === 'step' && <small>{node.data.startMinute}–{node.data.endMinute} min</small>}
+          {stepNames && <small>{stepNames.get(node.id).slice(node.data.label.length + 2)}</small>}
         </label>
       ))}</div>
     </details>
@@ -42,7 +43,7 @@ function SourceChoices({ title, choices, selected, onToggle }) {
 }
 const nodeShape = PropTypes.shape({ id: PropTypes.string, type: PropTypes.string, data: PropTypes.object });
 SourceChoices.propTypes = { title: PropTypes.string.isRequired, choices: PropTypes.arrayOf(nodeShape).isRequired,
-  selected: PropTypes.instanceOf(Set).isRequired, onToggle: PropTypes.func.isRequired };
+  selected: PropTypes.instanceOf(Set).isRequired, onToggle: PropTypes.func.isRequired, stepNames: PropTypes.instanceOf(Map) };
 
 // A downstream step cannot also be a prerequisite of the step being edited.
 function unavailableSources(id, edges) {
@@ -57,17 +58,20 @@ function unavailableSources(id, edges) {
 
 const itemLabels = { step: 'step', ingredient: 'ingredient', finalDish: 'recipe' };
 
-export function ItemEditor({ type, node, nodes, edges, onSave, onDelete, onClose }) {
+export function ItemEditor({ type, node, nodes, edges, onSave, onDelete, onClose, countReopened }) {
   const [name, setName] = useState(node?.data.label ?? '');
   const [duration, setDuration] = useState(node?.data.durationMinutes ?? '');
   const [selected, setSelected] = useState(() => new Set(edges.filter(e => e.target === node?.id).map(e => e.source)));
   const [error, setError] = useState('');
   const linesHint = useId();
+  const progressHint = useId();
   const addingIngredients = !node && type === 'ingredient';
   const lines = addingIngredients ? name.split(/\r\n?|\n/).map(line => line.trim()).filter(Boolean) : [];
   const isStep = type === 'step';
   const title = `${node ? 'Edit' : 'Add'} ${itemLabels[type]}`;
   const submitLabel = node ? 'Save changes' : lines.length > 1 ? `Add ${lines.length} ingredients` : title;
+  const reopened = name.trim() && (!isStep || Number(duration) > 0)
+    ? countReopened?.(name.trim(), Number(duration), [...selected]) ?? 0 : 0;
   const excluded = unavailableSources(node?.id, edges);
   const candidates = nodes.filter(item => !excluded.has(item.id));
   function toggle(id) {
@@ -107,21 +111,25 @@ export function ItemEditor({ type, node, nodes, edges, onSave, onDelete, onClose
             <SourceChoices title="Ingredients used" choices={candidates.filter(n => n.type === 'ingredient')}
               selected={selected} onToggle={toggle} />
             <SourceChoices title={isStep ? 'Start after' : 'Finish after'} choices={candidates.filter(n => n.type === 'step')}
-              selected={selected} onToggle={toggle} />
+              selected={selected} onToggle={toggle} stepNames={getStepNames(nodes)} />
           </>}
           {error && <p className="form-error" role="alert">{error}</p>}
         </div>
+        {reopened > 0 && <p className="edit-progress-hint" id={progressHint} role="status">
+          Saving this change will reopen {reopened} completed {reopened === 1 ? 'step' : 'steps'}.
+        </p>}
         <footer className="dialog-actions">
           {node && <button type="button" className="text-action danger" onClick={() => onDelete(node.id)}><DeleteOutlineIcon />Delete</button>}
           <button type="button" className="action secondary" onClick={onClose}>Cancel</button>
-          <button className="action primary" type="submit">{submitLabel}</button>
+          <button className="action primary" type="submit" aria-describedby={reopened > 0 ? progressHint : undefined}>{submitLabel}</button>
         </footer>
       </form>
     </RecipeDialog>
   );
 }
 ItemEditor.propTypes = { type: PropTypes.string.isRequired, node: nodeShape, nodes: PropTypes.arrayOf(nodeShape).isRequired,
-  edges: PropTypes.array.isRequired, onSave: PropTypes.func.isRequired, onDelete: PropTypes.func.isRequired, onClose: PropTypes.func.isRequired };
+  edges: PropTypes.array.isRequired, onSave: PropTypes.func.isRequired, onDelete: PropTypes.func.isRequired,
+  onClose: PropTypes.func.isRequired, countReopened: PropTypes.func };
 
 export function NewRecipeDialog({ onCreate, onClose }) {
   const [name, setName] = useState('');
@@ -141,22 +149,37 @@ export function NewRecipeDialog({ onCreate, onClose }) {
 NewRecipeDialog.propTypes = { onCreate: PropTypes.func.isRequired, onClose: PropTypes.func.isRequired };
 
 export function RecipeBoxDialog({ entries, activeId, onOpen, onImport, onExample, onRemove, onClose }) {
+  const [examples, setExamples] = useState(false);
   return (
-    <RecipeDialog title="Recipe box" onClose={onClose}>
+    <RecipeDialog title={examples ? 'Add an example' : 'Recipe box'} onClose={onClose}>
+      {examples ? <>
+        <div className="dialog-body library-list">
+          {[['beer-cheese', 'Beer Cheese Dip', '15 min'], ['stir-fry', 'Veggie Stir Fry', '9 min']].map(([id, title, time]) =>
+            <button type="button" key={id} className="library-row" autoFocus={id === 'beer-cheese'}
+              onClick={() => onExample(id)} aria-label={`Add ${title}`}>
+              <RecipePhoto cover={id} />
+              <span className="library-detail"><strong>{title}</strong><small>{time}</small></span>
+              <ChevronRightIcon aria-hidden="true" />
+            </button>)}
+        </div>
+        <footer className="dialog-actions"><button className="action secondary" onClick={() => setExamples(false)}>Back to recipe box</button></footer>
+      </> : <>
       <div className="dialog-body library-list">
         {entries.map(entry => (
           <div key={entry.id} className="library-entry"><button type="button" onClick={() => onOpen(entry.id)} className="library-row"
             aria-label={`Open ${entry.title}`}>
             {entry.cover ? <RecipePhoto cover={entry.cover} /> : <span className="library-art"><RestaurantMenuIcon /></span>}
-            <span className="library-detail"><strong>{entry.title}</strong><small>{entry.stepCount} {entry.stepCount === 1 ? 'step' : 'steps'} · {entry.totalMinutes} min</small></span>
+            <span className="library-detail"><strong>{entry.title}</strong><small>
+              {entry.completedCount ? `${entry.completedCount} of ${entry.stepCount} steps done` : `${entry.stepCount} ${entry.stepCount === 1 ? 'step' : 'steps'}`} · {entry.totalMinutes} min</small></span>
             {entry.id === activeId ? <span className="library-current">Open</span> : <ChevronRightIcon />}
           </button>{entries.length > 1 && <button className="icon-button remove-recipe"
             title={`Remove ${entry.title} from recipe box`} aria-label={`Remove ${entry.title} from recipe box`}
             onClick={() => onRemove(entry)}><DeleteOutlineIcon /></button>}</div>
         ))}
       </div>
-      <footer className="dialog-actions"><button className="text-action" onClick={onExample}>Add example recipe</button>
+      <footer className="dialog-actions"><button className="text-action" onClick={() => setExamples(true)}>Add example recipe</button>
         <button className="action secondary" onClick={onImport}><FileOpenOutlinedIcon />Import recipe</button></footer>
+      </>}
     </RecipeDialog>
   );
 }
