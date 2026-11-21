@@ -1,8 +1,10 @@
 import { emptyRecipe, recipeReducer, savedRecipeNode } from './recipeGraph.js';
 import { isRecipePhoto } from './recipePhoto.js';
+import { getCookingSteps, reconcileCookingProgress, validCompletedSteps } from './cookingProgress.js';
 
 const dishTitle = nodes => nodes.find(node => node.type === 'finalDish')?.data.label.trim() ?? '';
-const supportedCover = cover => cover === null || cover === 'beer-cheese' || isRecipePhoto(cover);
+const exampleCover = cover => cover === 'beer-cheese' || cover === 'stir-fry';
+const supportedCover = cover => cover === null || exampleCover(cover) || isRecipePhoto(cover);
 const photoError = 'Choose a local JPEG, PNG or WebP photo to use as the recipe cover.';
 
 function availableChecks(nodes, checkedIds) {
@@ -10,7 +12,7 @@ function availableChecks(nodes, checkedIds) {
   return [...new Set(checkedIds)].filter(id => ingredients.has(id));
 }
 
-function readEntry({ id, file, cover = file?.cover ?? null, checkedIds = [] }, fromStorage = false) {
+function readEntry({ id, file, cover = file?.cover ?? null, checkedIds = [], completedStepIds = [] }, fromStorage = false) {
   if (typeof id !== 'string' || !id || !Array.isArray(checkedIds) ||
       checkedIds.some(value => typeof value !== 'string') || (cover !== null && typeof cover !== 'string')) {
     throw new Error('A recipe box entry is invalid.');
@@ -23,7 +25,11 @@ function readEntry({ id, file, cover = file?.cover ?? null, checkedIds = [] }, f
   }
   const { nodes, edges, error } = recipeReducer(emptyRecipe, { type: 'import', file });
   if (error) throw new Error(error);
-  return { id, nodes, edges, cover, checkedIds: availableChecks(nodes, checkedIds) };
+  const restored = fromStorage && Array.isArray(completedStepIds) ? completedStepIds : [];
+  return {
+    id, nodes, edges, cover, checkedIds: availableChecks(nodes, checkedIds),
+    completedStepIds: validCompletedSteps(getCookingSteps(nodes, edges), restored),
+  };
 }
 
 // The editor owns the active graph. Its slot in the collection stores just
@@ -31,16 +37,16 @@ function readEntry({ id, file, cover = file?.cover ?? null, checkedIds = [] }, f
 function openEntry(entries, activeId, importVersion, storageBlocked = false) {
   const entry = entries.find(item => item.id === activeId);
   if (!entry) throw new Error('The active recipe is missing from the recipe box.');
-  const { nodes, edges, cover, checkedIds } = entry;
+  const { nodes, edges, cover, checkedIds, completedStepIds } = entry;
   return {
-    nodes, edges, activeId, cover, checkedIds, importVersion, storageBlocked, error: '',
+    nodes, edges, activeId, cover, checkedIds, completedStepIds, importVersion, storageBlocked, error: '',
     entries: entries.map(item => item.id === activeId ? { id: activeId } : item),
   };
 }
 
 function allEntries(state) {
-  const { activeId: id, nodes, edges, cover, checkedIds } = state;
-  return state.entries.map(entry => entry.id === id ? { id, nodes, edges, cover, checkedIds } : entry);
+  const { activeId: id, nodes, edges, cover, checkedIds, completedStepIds } = state;
+  return state.entries.map(entry => entry.id === id ? { id, nodes, edges, cover, checkedIds, completedStepIds } : entry);
 }
 
 export function makeRecipeBox(demoFile, serializedOrNull) {
@@ -61,22 +67,23 @@ export function makeRecipeBox(demoFile, serializedOrNull) {
 }
 
 export function serializeRecipeBox(state) {
-  const recipes = allEntries(state).map(({ id, nodes, edges, cover, checkedIds }) => {
+  const recipes = allEntries(state).map(({ id, nodes, edges, cover, checkedIds, completedStepIds }) => {
     const savedNodes = nodes.map(savedRecipeNode);
     const savedEdges = edges.map(edge => {
       const saved = { ...edge };
       delete saved.selected;
       return saved;
     });
-    return { id, file: { nodes: savedNodes, edges: savedEdges }, cover, checkedIds };
+    return { id, file: { nodes: savedNodes, edges: savedEdges }, cover, checkedIds, completedStepIds };
   });
   return JSON.stringify({ version: 1, activeId: state.activeId, recipes });
 }
 
 export function listRecipes(state) {
-  return allEntries(state).map(({ id, nodes, cover }) => ({
+  return allEntries(state).map(({ id, nodes, cover, completedStepIds }) => ({
     id, cover, title: dishTitle(nodes) || 'Untitled recipe',
     stepCount: nodes.filter(node => node.type === 'step').length,
+    completedCount: completedStepIds.length,
     ingredientCount: nodes.filter(node => node.type === 'ingredient').length,
     totalMinutes: nodes.reduce((latest, node) => Math.max(latest, node.data.endMinute ?? 0), 0),
   }));
@@ -115,6 +122,17 @@ export function boxReducer(state, action) {
     }
     case 'resetPrep':
       return state.checkedIds.length ? { ...state, checkedIds: [] } : state;
+    case 'resetCooking':
+      return state.completedStepIds.length ? { ...state, completedStepIds: [] } : state;
+    case 'toggleStepDone': {
+      const steps = getCookingSteps(state.nodes, state.edges, state.completedStepIds);
+      const step = steps.get(action.id);
+      if (!step || step.waitingOn.length) return state;
+      const completedStepIds = step.done
+        ? validCompletedSteps(steps, state.completedStepIds.filter(id => id !== action.id))
+        : [...state.completedStepIds, action.id];
+      return { ...state, completedStepIds };
+    }
     case 'checkIngredient': {
       if (!state.nodes.some(node => node.type === 'ingredient' && node.id === action.id)) return state;
       const checkedIds = state.checkedIds.includes(action.id)
@@ -125,12 +143,15 @@ export function boxReducer(state, action) {
     default: {
       const next = recipeReducer(state, action);
       if (next.nodes === state.nodes) return next;
+      if (action.type === 'nodesChange' && action.changes.every(change =>
+        ['select', 'position', 'dimensions'].includes(change.type))) return next;
       const title = nodes => dishTitle(nodes).replace(/\s+/g, ' ').toLowerCase();
-      const exampleRenamed = state.cover === 'beer-cheese' && title(next.nodes) !== title(state.nodes);
+      const exampleRenamed = exampleCover(state.cover) && title(next.nodes) !== title(state.nodes);
       return {
         ...next,
         cover: exampleRenamed ? null : state.cover,
         checkedIds: availableChecks(next.nodes, state.checkedIds),
+        completedStepIds: action.type === 'import' ? [] : reconcileCookingProgress(state, next),
       };
     }
   }

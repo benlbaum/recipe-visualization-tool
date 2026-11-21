@@ -3,6 +3,28 @@ export const MIN_STEP_WIDTH = 210;
 
 const NODE_GAP = 24;
 const DURATION_SUFFIX = /\s*\((\d+(?:\.\d+)?(?:e[+-]?\d+)?)\s*min(?:ute)?s?\)\s*$/i;
+const minutes = new Intl.NumberFormat(undefined, { maximumSignificantDigits: 15 });
+
+export function formatStepInterval({ data }) {
+  return `${minutes.format(data.startMinute)}–${minutes.format(data.endMinute)} min`;
+}
+
+// Match references in Method and Timeline even when two parallel steps have
+// exactly the same instruction, start, and finish.
+export function getStepNames(nodes) {
+  const matches = new Map();
+  for (const node of nodes) {
+    if (node.type !== 'step') continue;
+    const name = `${node.data.label}, ${formatStepInterval(node)}`;
+    if (!matches.has(name)) matches.set(name, []);
+    matches.get(name).push(node.id);
+  }
+  const names = new Map();
+  for (const [name, ids] of matches) {
+    ids.forEach((id, index) => names.set(id, ids.length > 1 ? `${name} (${index + 1} of ${ids.length})` : name));
+  }
+  return names;
+}
 
 export function getStepDescription(data) {
   return (data.label ?? '').replace(DURATION_SUFFIX, '');

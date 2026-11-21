@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { getStepDescription, getStepDuration, layoutRecipe, MIN_STEP_WIDTH, PIXELS_PER_MINUTE } from '../src/recipeTimeline.js';
+import { getStepDescription, getStepDuration, getStepNames, layoutRecipe, MIN_STEP_WIDTH, PIXELS_PER_MINUTE } from '../src/recipeTimeline.js';
 
 const step = (id, durationMinutes) => ({ id, type: 'step', data: { label: id, durationMinutes } });
 const edge = (source, target) => ({ source, target });
@@ -13,6 +13,14 @@ function timings(layout) {
     [node.id, [node.data.startMinute, node.data.endMinute]]
   ));
 }
+
+test('step references distinguish repeated instructions at the same or different times', () => {
+  const steps = ['pan', 'wok', 'finish'].map(id => ({ id, type: 'step', data: { label: 'Saute', durationMinutes: 2 } }));
+  const nodes = layoutRecipe([ingredient, ...steps, dish], [edge('wok', 'finish')]);
+  assert.deepEqual(Object.fromEntries(getStepNames(nodes)), {
+    pan: 'Saute, 0–2 min (1 of 2)', wok: 'Saute, 0–2 min (2 of 2)', finish: 'Saute, 2–4 min',
+  });
+});
 
 test('a fork starts both branches together and a join waits for the longer branch', () => {
   const nodes = [dish, step('serve', 1), step('sauce', 3), ingredient, step('boil', 9), step('prep', 2)];

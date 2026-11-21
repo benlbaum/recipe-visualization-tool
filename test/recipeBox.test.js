@@ -104,7 +104,7 @@ test('removing an inactive recipe preserves the editor and its pending layout', 
 test('a blank recipe can grow independently and deleted ingredients leave its checklist', () => {
   const blank = boxReducer(toggle(newBox()), { type: 'insertRecipe', id: 'new', file: { nodes: [] } });
   assert.deepEqual(listRecipes(blank)[1], {
-    id: 'new', title: 'Untitled recipe', cover: null, ingredientCount: 0, stepCount: 0, totalMinutes: 0,
+    id: 'new', title: 'Untitled recipe', cover: null, ingredientCount: 0, stepCount: 0, completedCount: 0, totalMinutes: 0,
   });
   const withSalt = boxReducer(blank, { type: 'add', node: demo.nodes[0] });
   assert.deepEqual(toggle(toggle(withSalt)).checkedIds, []);
