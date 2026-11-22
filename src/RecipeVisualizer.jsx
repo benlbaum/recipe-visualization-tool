@@ -28,6 +28,7 @@ import { ItemEditor, NewRecipeDialog, RecipeBoxDialog, RecipeDialog, PhotoDialog
 import { boxReducer, listRecipes, makeRecipeBox, serializeRecipeBox } from './recipeBox.js';
 import { exportRecipe, recipeReducer } from './recipeGraph.js';
 import { useReadingChoice, useReadingScroll } from './readingPlace.js';
+import useMobilePlanScroll from './useMobilePlanScroll.js';
 
 const storageKey = 'mise.recipe-box.v1';
 const smallScreen = '(max-width: 760px), (max-width: 960px) and (max-height: 540px) and (orientation: landscape) and (pointer: coarse)';
@@ -190,7 +191,9 @@ function RecipeEditor() {
     onCook={compact || expanded ? () => { setView('method'); methodButton.current?.focus(); } : undefined}
     onAdd={() => add('ingredient')} onEdit={openEditor} />;
   const localWarning = saveWarning || (recipe.storageBlocked ? 'Local saving is unavailable. Export your recipe to keep a copy.' : '');
-  return (
+  const scrollPlan = compact && !expanded;
+  const pageRef = useMobilePlanScroll(scrollPlan, recipe.activeId, Boolean(recipe.error || localWarning));
+  const workspace = (
     <div className="studio">
       <header className="app-bar">
         <div className="app-bar-inner">
@@ -317,6 +320,7 @@ function RecipeEditor() {
           }}>{removal.entry ? 'Remove recipe' : 'Delete'}</button></footer></RecipeDialog>}
     </div>
   );
+  return <div ref={pageRef} className={scrollPlan ? 'mobile-plan-page' : undefined}>{workspace}</div>;
 }
 
 export default function RecipeVisualizer() {

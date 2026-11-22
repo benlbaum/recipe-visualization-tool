@@ -31,7 +31,7 @@ if (!process.versions.electron) {
   app.whenReady().then(async () => {
     const window = new BrowserWindow({ show: false, webPreferences: { offscreen: true, backgroundThrottling: false } });
     await run(window.webContents);
-    writeFileSync(result, 'Phone UI passed for timeline handoffs, landscape ingredient taps and portrait method position after navigation and reload.');
+    writeFileSync(result, 'Phone UI passed for scrolling headers, timeline handoffs, landscape ingredient taps and restoring method position.');
     app.exit(0);
   }).catch(error => { writeFileSync(result, error.stack); app.exit(1); });
 }
@@ -59,6 +59,18 @@ async function run(page) {
     await cdp('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
     await cdp('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   }
+  async function swipe(x, y, dx, dy) {
+    await cdp('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    for (let move = 1; move <= 10; move++) {
+      await cdp('Input.dispatchTouchEvent', { type: 'touchMove',
+        touchPoints: [{ x: x + dx * move / 10, y: y + dy * move / 10 }] });
+      await delay(20);
+    }
+    // End at rest so a fling cannot consume the next tap.
+    await delay(160);
+    await cdp('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await delay(100);
+  }
   async function button(name) {
     const point = await until(`tappable “${name}” button`, () => read(label => {
       const element = [...document.querySelectorAll('button')].find(button =>
@@ -74,6 +86,20 @@ async function run(page) {
   }
 
   await phone(390, 844);
+  await button('Method');
+  const planBounds = () => read(() => {
+    const bounds = document.querySelector('.plan-panel').getBoundingClientRect();
+    return { top: bounds.top, height: bounds.height, bottom: bounds.bottom };
+  });
+  const initial = await planBounds();
+  await swipe(180, 650, 0, -60);
+  const partial = await planBounds();
+  assert.ok(partial.top > 10 && partial.top < initial.top - 10);
+  assert.ok(partial.height > initial.height + 10 && Math.abs(partial.bottom - initial.bottom) < 2);
+  await swipe(180, 650, 0, -225);
+  assert.ok(Math.abs((await planBounds()).top) <= 1);
+  await swipe(180, 450, 0, 250);
+  assert.ok(Math.abs((await planBounds()).top - initial.top) <= 1);
   await button('Timeline');
   await until('forward minute-10 handoff', () => read(() => {
     const paths = [...document.querySelectorAll('.react-flow__edge')];
@@ -92,6 +118,27 @@ async function run(page) {
     }
     return true;
   }));
+  const canvasPoint = () => read(() => {
+    const pane = document.querySelector('.react-flow__pane');
+    const rect = pane.getBoundingClientRect();
+    // Start on canvas background, clear of draggable steps and the zoom controls.
+    for (let y = rect.bottom - 65; y > rect.top + 80; y -= 12) {
+      if (document.elementFromPoint(rect.x + rect.width / 2, y) === pane) return { x: rect.x + rect.width / 2, y };
+    }
+  });
+  const horizontal = await canvasPoint();
+  assert.ok(horizontal);
+  await swipe(horizontal.x, horizontal.y, -70, 0);
+  assert.ok(Math.abs((await planBounds()).top - initial.top) <= 1);
+  const vertical = await canvasPoint();
+  assert.ok(vertical);
+  await swipe(vertical.x, vertical.y, 0, -65);
+  const afterPan = await planBounds();
+  assert.ok(afterPan.top < initial.top - 30, `Timeline swipe moved the plan from ${initial.top} to ${afterPan.top}`);
+  await button('Expand cooking plan');
+  assert.equal((await planBounds()).top, 0);
+  await button('Exit expanded view');
+  assert.ok(Math.abs((await planBounds()).top - initial.top) <= 1);
 
   await phone(568, 320);
   await button('Recipe box');
@@ -138,17 +185,10 @@ async function run(page) {
   await read(async () => { await document.fonts.ready; });
   const start = await method();
   assert.ok(start.max > 200);
-  for (let swipe = 0; swipe < 10 && (await method()).top < start.max - 4; swipe++) {
-    await cdp('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: start.x, y: start.y + 80 }] });
-    for (let move = 1; move <= 10; move++) {
-      await cdp('Input.dispatchTouchEvent', { type: 'touchMove',
-        touchPoints: [{ x: start.x, y: start.y + 80 - move * 16 }] });
-      await delay(20);
-    }
-    // End the drag at rest. A fling can consume the next tap on Ingredients.
-    await delay(160);
-    await cdp('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    await delay(100);
+  for (let index = 0; index < 10; index++) {
+    const current = await method();
+    if (current.top >= current.max - 4) break;
+    await swipe(current.x, current.y + 80, 0, -160);
   }
   const place = await until('near-bottom reading position after touch scroll', async () => {
     const current = await method();

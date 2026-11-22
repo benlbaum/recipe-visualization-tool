@@ -1,3 +1,25 @@
+.mobile-plan-page {
+  height: 100vh;
+  height: 100dvh;
+  overflow: auto;
+  overflow-anchor: none;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+}
+
+.mobile-plan-page > .studio {
+  min-height: 0;
+  height: calc(100% + var(--plan-scroll, 0px));
+}
+
+/* Transfer the travel below the page into plan height as the cover scrolls
+   away. This keeps the footer in reach and the native scroll range constant. */
+.mobile-plan-page::after {
+  content: '';
+  display: block;
+  height: max(0px, calc(var(--plan-scroll-range, 0px) - var(--plan-scroll, 0px)));
+}
+
 @media (max-width: 760px) and (orientation: portrait) and (pointer: coarse) {
   .app-actions .box-action { white-space: nowrap; min-height: 44px; }
   .app-actions .file-action, .app-actions .new-action { width: 44px; min-height: 44px; }
