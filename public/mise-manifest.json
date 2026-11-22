@@ -1,0 +1,13 @@
+{
+  "name": "Mise Recipe Planner",
+  "short_name": "Mise",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f5ef",
+  "theme_color": "#244838",
+  "icons": [
+    { "src": "./mise.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "./mise-touch.png", "sizes": "192x192", "type": "image/png" }
+  ]
+}
