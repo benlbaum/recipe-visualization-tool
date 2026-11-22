@@ -2,7 +2,11 @@ export const PIXELS_PER_MINUTE = 44;
 export const MIN_STEP_WIDTH = 210;
 
 const COLUMN_GAP = 16;
-const ROW_GAP = 20;
+export const timelineCards = {
+  desktop: { minWidth: 170, maxWidth: MIN_STEP_WIDTH, rowGap: 20 },
+  portrait: { minWidth: 158, maxWidth: 182, rowGap: 18 },
+  landscape: { minWidth: 280, maxWidth: 312, rowGap: 10 },
+};
 const DURATION_SUFFIX = /\s*\((\d+(?:\.\d+)?(?:e[+-]?\d+)?)\s*min(?:ute)?s?\)\s*$/i;
 const minutes = new Intl.NumberFormat(undefined, { maximumSignificantDigits: 15 });
 
@@ -85,7 +89,7 @@ function scheduleSteps(nodes, edges, pixelsPerMinute) {
   return steps;
 }
 
-function placeRows(boxes, edges) {
+function placeRows(boxes, edges, { minWidth, maxWidth, rowGap }) {
   const byId = new Map(boxes.map(box => [box.node.id, box]));
   for (const edge of edges) {
     const source = byId.get(edge.source);
@@ -112,7 +116,7 @@ function placeRows(boxes, edges) {
     const startInset = box.receivesHandoff ? inset : 0;
     const endInset = box.hasHandoff ? inset : 0;
     const barWidth = box.span - startInset - endInset;
-    const captionWidth = box.hasHandoff ? Math.max(170, Math.min(MIN_STEP_WIDTH, barWidth)) : MIN_STEP_WIDTH;
+    const captionWidth = box.hasHandoff ? Math.max(minWidth, Math.min(maxWidth, barWidth)) : maxWidth;
     box.data = { ...box.data, startInset, barWidth, captionWidth, captionAbove: false };
     box.left += startInset;
     box.right = box.left + Math.max(barWidth, captionWidth);
@@ -132,9 +136,9 @@ function placeRows(boxes, edges) {
     let canContinue = true;
     for (const other of placed) {
       if (box.left >= other.right + COLUMN_GAP || other.left >= box.right + COLUMN_GAP) continue;
-      if (preferred < other.y + other.height + ROW_GAP && other.y < preferred + box.height + ROW_GAP) canContinue = false;
-      if (firstGap === undefined && top + box.height + ROW_GAP <= other.y) firstGap = top;
-      top = Math.max(top, other.y + other.height + ROW_GAP);
+      if (preferred < other.y + other.height + rowGap && other.y < preferred + box.height + rowGap) canContinue = false;
+      if (firstGap === undefined && top + box.height + rowGap <= other.y) firstGap = top;
+      top = Math.max(top, other.y + other.height + rowGap);
     }
     box.y = canContinue ? preferred : firstGap ?? top;
     box.floor = pinned || !box.parent ? box.y : floor;
@@ -151,7 +155,7 @@ function placeRows(boxes, edges) {
   }
 }
 
-export function layoutRecipe(nodes, edges, pixelsPerMinute = PIXELS_PER_MINUTE) {
+export function layoutRecipe(nodes, edges, pixelsPerMinute = PIXELS_PER_MINUTE, cards = timelineCards.desktop) {
   const steps = scheduleSteps(nodes, edges, pixelsPerMinute);
   let totalMinutes = 0;
   for (const step of steps.values()) {
@@ -160,8 +164,8 @@ export function layoutRecipe(nodes, edges, pixelsPerMinute = PIXELS_PER_MINUTE) 
 
   const boxes = nodes.map(node => {
     const step = steps.get(node.id);
-    let x = node.type === 'finalDish' ? totalMinutes * pixelsPerMinute : -300;
-    let data = node.data;
+    let x = node.type === 'finalDish' ? totalMinutes * pixelsPerMinute : -cards.maxWidth - 90;
+    let data = { ...node.data, captionWidth: cards.maxWidth };
     if (step) {
       x = step.startMinute * pixelsPerMinute;
       const { startMinute, endMinute, durationMinutes } = step;
@@ -169,10 +173,10 @@ export function layoutRecipe(nodes, edges, pixelsPerMinute = PIXELS_PER_MINUTE) 
     } else if (node.type === 'finalDish') {
       data = { ...data, endMinute: totalMinutes };
     }
-    return { node, data, preferredY: data.preferredY, x, left: x, right: x + MIN_STEP_WIDTH,
+    return { node, data, preferredY: data.preferredY, x, left: x, right: x + cards.maxWidth,
       span: step ? step.durationMinutes * pixelsPerMinute : 0, height: node.height || 100 };
   });
 
-  placeRows(boxes, edges);
+  placeRows(boxes, edges, cards);
   return boxes.map(({ node, data, x, y }) => ({ ...node, data, position: { x, y } }));
 }

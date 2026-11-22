@@ -68,8 +68,30 @@ function RecipeEditor() {
     // restores the cook's last method or timeline alongside that checklist.
     if (compact || next !== 'ingredients') setReadingView(next);
   }
-  const toggleExpanded = useCallback(() => setExpandedView(expanded ? 'no' : readingView),
-    [expanded, readingView, setExpandedView]);
+  const nativePlan = useRef(false);
+  useEffect(() => {
+    function fullscreenChanged() {
+      if (nativePlan.current && !document.fullscreenElement) {
+        nativePlan.current = false;
+        setExpandedView('no');
+      }
+    }
+    document.addEventListener('fullscreenchange', fullscreenChanged);
+    return () => document.removeEventListener('fullscreenchange', fullscreenChanged);
+  }, [setExpandedView]);
+  const toggleExpanded = useCallback(() => {
+    setExpandedView(expanded ? 'no' : readingView);
+    if (expanded) {
+      if (nativePlan.current && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      nativePlan.current = false;
+    } else if (compact && matchMedia('(orientation: landscape) and (pointer: coarse)').matches && document.fullscreenEnabled) {
+      // Request from the tap itself. Fullscreen the document so editor dialogs
+      // rendered into the body remain visible. The expanded layout also works
+      // when a browser declines the native request.
+      nativePlan.current = true;
+      document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => { nativePlan.current = false; });
+    }
+  }, [compact, expanded, readingView, setExpandedView]);
   const [filter, setFilter] = useReadingChoice(place + '.steps', 'all');
   const methodScroll = useReadingScroll(place + '.method.' + filter);
   const [prepFilter, setPrepFilter] = useReadingChoice(place + '.prepFilter', 'all');
@@ -263,7 +285,7 @@ function RecipeEditor() {
                   onResetSteps={() => setModal({ screen: 'progress', title: 'Restart cooking?', confirm: 'Restart cooking',
                     action: { type: 'resetCooking' }, message: 'Clear the completed steps for this recipe? Your gathered ingredients stay checked.' })} />
                 : steps.length || (showIngredients && ingredients.length)
-                  ? <TimelineCanvas nodes={nodes} edges={recipe.edges} onNodesChange={onNodesChange}
+                  ? <TimelineCanvas expanded={expanded} nodes={nodes} edges={recipe.edges} onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange} onConnect={onConnect} version={recipe.importVersion} showIngredients={showIngredients} />
                   : <div className="empty-plan"><span className="empty-mark"><ViewTimelineOutlinedIcon /></span>
                     <h3>Start your cooking plan</h3><p>Add a step and its duration to see it on the timeline.</p>

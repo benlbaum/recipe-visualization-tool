@@ -122,8 +122,13 @@ async function run(page) {
     const pane = document.querySelector('.react-flow__pane');
     const rect = pane.getBoundingClientRect();
     // Start on canvas background, clear of draggable steps and the zoom controls.
-    for (let y = rect.bottom - 65; y > rect.top + 80; y -= 12) {
-      if (document.elementFromPoint(rect.x + rect.width / 2, y) === pane) return { x: rect.x + rect.width / 2, y };
+    for (let y = rect.bottom - 34; y > rect.top + 80; y -= 16) {
+      // A fingertip can activate a nearby card even when its center hits
+      // the pane. Use a clear patch of background for the pan gesture.
+      for (let x = rect.right - 35; x > rect.left + 80; x -= 24) {
+        if ([-20, 0, 20].every(dx => [-20, 0, 20].every(dy =>
+          document.elementFromPoint(x + dx, y + dy) === pane))) return { x, y };
+      }
     }
   });
   const horizontal = await canvasPoint();
@@ -137,6 +142,42 @@ async function run(page) {
   assert.ok(afterPan.top < initial.top - 30, `Timeline swipe moved the plan from ${initial.top} to ${afterPan.top}`);
   await button('Expand cooking plan');
   assert.equal((await planBounds()).top, 0);
+  const cardShape = () => read(() => {
+    const steps = [...document.querySelectorAll('.react-flow__node-step')];
+    const butter = steps.find(step => step.textContent.startsWith('Melt the butter'))?.querySelector('.recipe-node__caption');
+    if (!butter) return null;
+    const rails = steps.map(step => step.querySelector('.recipe-node__bar').getBoundingClientRect().top);
+    return { width: butter.offsetWidth, height: butter.offsetHeight,
+      span: Math.max(...rails) - Math.min(...rails) };
+  });
+  const upright = await cardShape();
+  await phone(844, 390);
+  const sideways = await until('wider and shallower landscape cards', async () => {
+    const shape = await cardShape();
+    return shape?.width > upright.width && shape.height < upright.height && shape.span < upright.span && shape;
+  });
+  assert.ok(sideways.width >= upright.width * 1.4);
+  const controlsClear = await read(() => document.querySelector('.timeline-controls').getBoundingClientRect().bottom <=
+    document.querySelector('.react-flow__pane').getBoundingClientRect().top + 1);
+  assert.ok(controlsClear);
+  await button('Exit expanded view');
+  // Exercise a browser that exposes fullscreen but declines the request.
+  await read(() => {
+    Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, value: true });
+    document.documentElement.requestFullscreen = options => {
+      window.requestedNavigationUI = options.navigationUI;
+      return Promise.reject(new TypeError('Fullscreen is unavailable'));
+    };
+  });
+  await button('Expand cooking plan');
+  assert.equal(await read(() => window.requestedNavigationUI), 'hide');
+  assert.equal((await planBounds()).top, 0);
+  await read(() => {
+    delete document.documentElement.requestFullscreen;
+    delete document.fullscreenEnabled;
+  });
+  await phone(390, 844);
+  await until('portrait cards after rotating back', async () => (await cardShape())?.width === upright.width);
   await button('Exit expanded view');
   assert.ok(Math.abs((await planBounds()).top - initial.top) <= 1);
 
