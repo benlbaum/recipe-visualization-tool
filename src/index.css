@@ -4,6 +4,7 @@
 :root {
   --font-ui: 'DM Sans Variable', system-ui, sans-serif;
   --font-display: 'Instrument Serif', Georgia, serif;
+  --title-spacing: .012em;
   --ink: #213b2f;
   --muted: #626b60;
   --forest: #244c3c;
@@ -74,7 +75,7 @@ button svg { flex: none; }
 .cover-title { display: flex; align-items: center; gap: 12px; }
 .cover-title h1 {
   margin: 0; font: 400 clamp(40px, 4.8vw, 79px)/1.15 var(--font-display);
-  letter-spacing: -.035em; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2;
+  letter-spacing: var(--title-spacing); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2;
   -webkit-box-orient: vertical; overflow: hidden; padding-bottom: .05em;
 }
 .title-edit { color: #dce5cc; border-radius: 50%; width: 32px; min-height: 32px; }
@@ -113,7 +114,7 @@ button svg { flex: none; }
   display: flex; align-items: center; justify-content: space-between; flex: none;
   gap: 12px; padding: 15px 22px 8px;
 }
-.plan-header h2 { font: 400 34px/1.12 var(--font-display); letter-spacing: -.025em; }
+.plan-header h2 { font: 400 34px/1.12 var(--font-display); letter-spacing: var(--title-spacing); }
 .plan-header .action { min-height: 34px; padding: 6px 11px; font-size: .82rem; }
 .plan-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding: 3px 20px 12px; }
 .view-switch { display: inline-flex; align-items: center; gap: 3px; }

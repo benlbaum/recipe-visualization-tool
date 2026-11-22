@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Handle, Position, useUpdateNodeInternals } from 'reactflow';
 import { ListItemIcon, Menu, MenuItem } from '@mui/material';
@@ -15,16 +15,11 @@ export default function RecipeNode({ id, data, type, selected }) {
   const [menuPosition, setMenuPosition] = useState(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const isStep = type === 'step';
-  const barWidth = isStep ? data.durationMinutes * (data.pixelsPerMinute ?? PIXELS_PER_MINUTE) : undefined;
-  const lastBarWidth = useRef(barWidth);
-
-  // A short bar can change length without changing the measured caption width.
+  const barWidth = isStep ? data.barWidth ?? data.durationMinutes * (data.pixelsPerMinute ?? PIXELS_PER_MINUTE) : undefined;
+  // Moving a port within a card need not change its measured dimensions.
   useLayoutEffect(() => {
-    if (lastBarWidth.current !== barWidth) {
-      lastBarWidth.current = barWidth;
-      updateNodeInternals(id);
-    }
-  }, [id, barWidth, updateNodeInternals]);
+    updateNodeInternals(id);
+  }, [id, barWidth, data.startInset, data.captionAbove, data.captionWidth, data.label, updateNodeInternals]);
 
   function openMenu(event) {
     event.preventDefault();
@@ -48,10 +43,11 @@ export default function RecipeNode({ id, data, type, selected }) {
   return (
     <>
       <div
-        className={`recipe-node recipe-node--${type}${selected ? ' recipe-node--selected' : ''}`}
+        className={`recipe-node recipe-node--${type}${selected ? ' recipe-node--selected' : ''}${data.captionAbove ? ' recipe-node--caption-above' : ''}`}
         style={{
           '--bar-width': isStep ? `${barWidth}px` : undefined,
-          '--caption-width': `${MIN_STEP_WIDTH}px`,
+          '--start-inset': `${data.startInset ?? 0}px`,
+          '--caption-width': `${data.captionWidth ?? MIN_STEP_WIDTH}px`,
         }}
         onContextMenu={openMenu}
       >
@@ -116,6 +112,10 @@ RecipeNode.propTypes = {
     done: PropTypes.bool,
     durationMinutes: PropTypes.number,
     pixelsPerMinute: PropTypes.number,
+    startInset: PropTypes.number,
+    barWidth: PropTypes.number,
+    captionWidth: PropTypes.number,
+    captionAbove: PropTypes.bool,
     startMinute: PropTypes.number,
     endMinute: PropTypes.number,
     onRequestEdit: PropTypes.func.isRequired,

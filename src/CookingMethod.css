@@ -14,7 +14,7 @@
   display: inline;
   margin: 0;
   font: 400 clamp(1.55rem, 3.5cqi, 2rem)/1.2 var(--font-display, Georgia, serif);
-  letter-spacing: -0.025em;
+  letter-spacing: var(--title-spacing);
 }
 .cook-summary progress {
   display: block;
@@ -146,7 +146,7 @@
   margin: 3px 0 0;
   color: var(--panel-ink);
   font: 400 clamp(1.35rem, 3cqi, 1.6rem)/1.17 var(--font-display, Georgia, serif);
-  letter-spacing: -.01em;
+  letter-spacing: var(--title-spacing);
 }
 .is-done h4 { color: var(--panel-muted); }
 .cook-ingredients, .cook-prerequisites {

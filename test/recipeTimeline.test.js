@@ -72,7 +72,7 @@ test('row placement reserves the visible label and measured height and respects 
   assert.ok(second.position.y >= first.position.y + short.height);
   assert.ok(next.position.x < first.position.x + MIN_STEP_WIDTH);
   assert.ok(next.position.y + 100 <= first.position.y || next.position.y >= first.position.y + short.height);
-  assert.equal(last.position.y, 0);
+  assert.equal(last.position.y, second.position.y); // continue the dragged branch when its row is clear
 });
 
 test('decimal-minute dependencies align with the same time on another branch', () => {
@@ -111,4 +111,31 @@ test('the bundled beer cheese recipe imports with parallel prep and a 15-minute 
     [[0, 1], [0, 1], [1, 3], [3, 6], [6, 10], [10, 15]]);
   assert.notEqual(steps[0].position.y, steps[1].position.y);
   assert.equal(result.find(node => node.type === 'finalDish').data.endMinute, 15);
+});
+
+test('beer and folding share a forward handoff below the separate cheddar branch', () => {
+  const demo = JSON.parse(readFileSync(new URL('../src/demoRecipe.json', import.meta.url), 'utf8'));
+  for (const scale of [44, 70, 100]) {
+    const layout = layoutRecipe(demo.nodes, demo.edges, scale);
+    const [cheddar, butter, flour, milk, beer, fold] = layout.filter(node => node.type === 'step');
+    assert.ok([butter, flour, milk, beer, fold].every(node => node.position.y > cheddar.position.y));
+    if (scale >= 70) {
+      assert.equal(milk.position.y, beer.position.y);
+      assert.equal(beer.position.y, fold.position.y);
+    }
+    const finish = beer.position.x + beer.data.startInset + beer.data.barWidth;
+    const start = fold.position.x + fold.data.startInset;
+    assert.ok(finish < 10 * scale && start > 10 * scale);
+    assert.equal(10 * scale - finish, start - 10 * scale);
+    assert.equal(beer.data.endMinute, fold.data.startMinute);
+  }
+});
+
+test('very short handoffs keep positive bar widths and exported node order does not determine the join', () => {
+  const nodes = [step('fold', 2), step('prep', 0.01), step('whisk', 2), step('heat', 0.01)];
+  const edges = [edge('prep', 'fold'), edge('whisk', 'fold'), edge('heat', 'whisk')];
+  const [fold, , whisk, heat] = layoutRecipe(nodes, edges, 100);
+  assert.equal(heat.data.barWidth, 0.75);
+  assert.ok(whisk.data.startInset + whisk.position.x > heat.data.barWidth);
+  assert.equal(fold.position.y, whisk.position.y);
 });

@@ -13,18 +13,35 @@ import 'reactflow/dist/style.css';
 import './TimelineCanvas.css';
 
 const nodeTypes = { ingredient: RecipeNode, step: RecipeNode, finalDish: RecipeNode };
-// A straight dependency across several minutes can run underneath an unrelated
-// bar in the same row. Route that long span through the gap above the row.
 function TimelineEdge(props) {
   const { sourceX, targetX, sourceY, targetY, id, markerStart, markerEnd, style, interactionWidth } = props;
-  if (props.label != null || targetX - sourceX < MIN_STEP_WIDTH || Math.abs(targetY - sourceY) > 2) {
-    return <BezierEdge {...props} />;
-  }
-  const path = `M ${sourceX} ${sourceY}
+  const gap = targetX - sourceX;
+  const dy = targetY - sourceY;
+  if (!props.data?.cookingLink) return <BezierEdge {...props} />;
+  let path;
+  if (gap >= MIN_STEP_WIDTH && Math.abs(dy) < 2) {
+    // Lift long same-row links over any intermediate bars.
+    path = `M ${sourceX} ${sourceY}
     C ${sourceX + 16} ${sourceY} ${sourceX + 16} ${sourceY - 18} ${sourceX + 34} ${sourceY - 18}
     L ${targetX - 34} ${targetY - 18}
     C ${targetX - 16} ${targetY - 18} ${targetX - 16} ${targetY} ${targetX} ${targetY}`;
+  } else {
+    // ReactFlow reports the outer edges of the 10px ports. On tiny bars
+    // those edges can overlap even though the port centers are in time order.
+    const overlap = Math.min(5, Math.max(0, -gap / 2));
+    const start = sourceX - overlap;
+    const end = targetX + overlap;
+    const turn = end - Math.min(20, (end - start) / 2);
+    const radius = Math.max(0, Math.min(10, end - turn, Math.abs(dy) / 2));
+    const rise = Math.sign(dy) * radius;
+    path = `M ${start} ${sourceY} H ${turn - radius}
+      Q ${turn} ${sourceY} ${turn} ${sourceY + rise} V ${targetY - rise}
+      Q ${turn} ${targetY} ${turn + radius} ${targetY} H ${end}`;
+  }
   return <BaseEdge id={id} path={path} markerStart={markerStart} markerEnd={markerEnd}
+    label={props.label} labelX={(sourceX + targetX) / 2} labelY={sourceY}
+    labelStyle={props.labelStyle} labelShowBg={props.labelShowBg} labelBgStyle={props.labelBgStyle}
+    labelBgPadding={props.labelBgPadding} labelBgBorderRadius={props.labelBgBorderRadius}
     style={style} interactionWidth={interactionWidth} />;
 }
 TimelineEdge.propTypes = {
@@ -32,6 +49,8 @@ TimelineEdge.propTypes = {
   targetX: PropTypes.number.isRequired, targetY: PropTypes.number.isRequired,
   markerStart: PropTypes.string, markerEnd: PropTypes.string, label: PropTypes.node,
   style: PropTypes.object, interactionWidth: PropTypes.number,
+  data: PropTypes.object, labelStyle: PropTypes.object, labelShowBg: PropTypes.bool,
+  labelBgStyle: PropTypes.object, labelBgPadding: PropTypes.array, labelBgBorderRadius: PropTypes.number,
 };
 const edgeTypes = { custom: TimelineEdge, default: TimelineEdge };
 const defaultEdgeOptions = {
@@ -97,7 +116,12 @@ function useChartScale(nodes, total, width, height, version, showIngredients, fi
     }
     const overviewZoom = Math.max(0.86, Math.min(1.02, (height - 62) / Math.max(1, bottom - top)));
     const available = Math.max(240, (width - 56) / overviewZoom - MIN_STEP_WIDTH - (showIngredients ? 300 : 0));
-    setScale(total ? Math.min(180, available / total) : PIXELS_PER_MINUTE);
+    // Give a typical step room for its caption on a phone. The cook can pan
+    // along the sequence at reading size or choose Fit all for the overview.
+    const durations = shown.filter(node => node.type === 'step').map(node => node.data.durationMinutes).sort((a, b) => a - b);
+    const typicalDuration = durations[Math.floor(durations.length / 2)] || 1;
+    const readingScale = width < 600 ? MIN_STEP_WIDTH / typicalDuration : 0;
+    setScale(total ? Math.min(180, Math.max(readingScale, available / total)) : PIXELS_PER_MINUTE);
     lastFrame.current = { width, version, showIngredients, fitRequest, hadSteps: total > 0 };
   }, [nodes, total, width, height, version, showIngredients, fitRequest]);
   // Guard transient frames and edits far larger than the originally fitted
@@ -180,6 +204,7 @@ export default function TimelineCanvas({
   const { visibleNodes, visibleEdges } = useMemo(() => {
     const shown = showIngredients ? nodes : nodes.filter(node => node.type !== 'ingredient');
     const stepNames = getStepNames(shown);
+    const cookingNodes = new Set(shown.filter(node => node.type !== 'ingredient').map(node => node.id));
     const names = new Set();
     const repeated = new Set();
     for (const node of shown) {
@@ -197,6 +222,7 @@ export default function TimelineCanvas({
       }
       return {
         ...edge,
+        data: { ...edge.data, cookingLink: stepNames.has(edge.source) && cookingNodes.has(edge.target) },
         ariaLabel: edge.ariaLabel === undefined ? `${references.get(edge.source)} leads to ${references.get(edge.target)}` : edge.ariaLabel,
         className: linked || edge.selected ? `${edge.className ?? ''} timeline-edge--linked` : edge.className,
       };

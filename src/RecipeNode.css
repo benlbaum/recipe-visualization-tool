@@ -23,6 +23,7 @@
 }
 
 .recipe-node--finalDish {
+  margin-left: var(--start-inset);
   border-color: var(--chart-forest, #234c3e);
   color: #fffef7;
   background: var(--chart-forest, #234c3e);
@@ -30,12 +31,22 @@
 
 .recipe-node--step {
   width: max(var(--caption-width), var(--bar-width));
+  margin-left: var(--start-inset);
   min-height: 0;
   display: block;
   padding: 0;
   border: none;
   text-align: left;
 }
+
+.recipe-node--caption-above {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.recipe-node--caption-above .recipe-node__caption { margin-top: 0; }
 
 .recipe-node__bar {
   position: relative;

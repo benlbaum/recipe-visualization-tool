@@ -31,7 +31,7 @@ if (!process.versions.electron) {
   app.whenReady().then(async () => {
     const window = new BrowserWindow({ show: false, webPreferences: { offscreen: true, backgroundThrottling: false } });
     await run(window.webContents);
-    writeFileSync(result, 'Phone UI passed: landscape ingredient taps and portrait method position after navigation and reload.');
+    writeFileSync(result, 'Phone UI passed for timeline handoffs, landscape ingredient taps and portrait method position after navigation and reload.');
     app.exit(0);
   }).catch(error => { writeFileSync(result, error.stack); app.exit(1); });
 }
@@ -72,6 +72,26 @@ async function run(page) {
     }, name));
     await tap(point);
   }
+
+  await phone(390, 844);
+  await button('Timeline');
+  await until('forward minute-10 handoff', () => read(() => {
+    const paths = [...document.querySelectorAll('.react-flow__edge')];
+    const link = paths.find(edge => edge.getAttribute('aria-label')?.startsWith('Whisk in the beer'));
+    const path = link?.querySelector('.react-flow__edge-path');
+    if (!path) return false;
+    const length = path.getTotalLength();
+    const start = path.getPointAtLength(0);
+    const end = path.getPointAtLength(length);
+    if (end.x - start.x < 12 || Math.abs(end.y - start.y) > 1) return false;
+    let previousX = start.x;
+    for (let distance = 1; distance <= length; distance++) {
+      const { x } = path.getPointAtLength(distance);
+      if (x < previousX - 0.01) return false;
+      previousX = x;
+    }
+    return true;
+  }));
 
   await phone(568, 320);
   await button('Recipe box');

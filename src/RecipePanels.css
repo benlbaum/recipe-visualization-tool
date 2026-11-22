@@ -33,7 +33,7 @@
 .method-empty h2 {
   margin: 0;
   font: 500 1.75rem/1.15 var(--font-display, Georgia, serif);
-  letter-spacing: -0.025em;
+  letter-spacing: var(--title-spacing);
 }
 
 .recipe-panel-add,

@@ -85,23 +85,69 @@ function scheduleSteps(nodes, edges, pixelsPerMinute) {
   return steps;
 }
 
-function placeRows(boxes) {
+function placeRows(boxes, edges) {
+  const byId = new Map(boxes.map(box => [box.node.id, box]));
+  for (const edge of edges) {
+    const source = byId.get(edge.source);
+    const target = byId.get(edge.target);
+    if (source?.node.type !== 'step' || !target || target.node.type === 'ingredient') continue;
+    // At a join, continue the branch that determines when cooking can resume.
+    if (!target.parent || source.data.endMinute > target.parent.data.endMinute) target.parent = source;
+    if (source.data.endMinute === (target.data.startMinute ?? target.data.endMinute)) {
+      source.hasHandoff = true;
+      target.receivesHandoff = true;
+    }
+  }
+  for (const box of boxes) {
+    if (box.node.type === 'finalDish') {
+      const startInset = box.receivesHandoff ? 16 : 0;
+      box.data = { ...box.data, startInset };
+      box.left += startInset;
+      box.right += startInset;
+    }
+    if (box.node.type !== 'step') continue;
+    // Leave a small seam around an immediate handoff. Cap it on tiny bars so
+    // even a short step retains a visible duration on the shared time scale.
+    const inset = Math.min(16, box.span / 4);
+    const startInset = box.receivesHandoff ? inset : 0;
+    const endInset = box.hasHandoff ? inset : 0;
+    const barWidth = box.span - startInset - endInset;
+    const captionWidth = box.hasHandoff ? Math.max(170, Math.min(MIN_STEP_WIDTH, barWidth)) : MIN_STEP_WIDTH;
+    box.data = { ...box.data, startInset, barWidth, captionWidth, captionAbove: false };
+    box.left += startInset;
+    box.right = box.left + Math.max(barWidth, captionWidth);
+  }
   // Reserve dragged rows first. A short bar's label can extend past its
   // finish time, so use the entire node footprint when sharing rows.
   const byPriority = [...boxes].sort((a, b) =>
     Number(Number.isFinite(b.preferredY)) - Number(Number.isFinite(a.preferredY)) || a.x - b.x
   );
-  const placed = []; // sorted from top to bottom
+  const placed = []; // sorted top to bottom
   for (const box of byPriority) {
-    let y = Number.isFinite(box.preferredY) ? box.preferredY : 0;
+    const pinned = Number.isFinite(box.preferredY);
+    const floor = pinned ? box.preferredY : box.parent?.floor ?? 0;
+    const preferred = pinned ? floor : box.parent?.y ?? floor;
+    let top = floor;
+    let firstGap;
+    let canContinue = true;
     for (const other of placed) {
-      if (box.x >= other.right + COLUMN_GAP || other.x >= box.right + COLUMN_GAP) continue;
-      if (y + box.height + ROW_GAP <= other.y) break;
-      y = Math.max(y, other.y + other.height + ROW_GAP);
+      if (box.left >= other.right + COLUMN_GAP || other.left >= box.right + COLUMN_GAP) continue;
+      if (preferred < other.y + other.height + ROW_GAP && other.y < preferred + box.height + ROW_GAP) canContinue = false;
+      if (firstGap === undefined && top + box.height + ROW_GAP <= other.y) firstGap = top;
+      top = Math.max(top, other.y + other.height + ROW_GAP);
     }
-    box.y = y;
-    const below = placed.findIndex(other => other.y > y);
+    box.y = canContinue ? preferred : firstGap ?? top;
+    box.floor = pinned || !box.parent ? box.y : floor;
+    const below = placed.findIndex(other => other.y > box.y);
     placed.splice(below < 0 ? placed.length : below, 0, box);
+  }
+  // A short step's caption may extend beyond its finish minute. If the next
+  // arrow descends there, hang the caption above the bar to clear the turn.
+  for (const box of boxes) {
+    const parent = box.parent;
+    if (parent?.hasHandoff && box.y > parent.y && parent.right > box.x) {
+      parent.data.captionAbove = true;
+    }
   }
 }
 
@@ -109,27 +155,24 @@ export function layoutRecipe(nodes, edges, pixelsPerMinute = PIXELS_PER_MINUTE) 
   const steps = scheduleSteps(nodes, edges, pixelsPerMinute);
   let totalMinutes = 0;
   for (const step of steps.values()) {
-    step.x = step.startMinute * pixelsPerMinute;
-    step.width = Math.max(MIN_STEP_WIDTH, step.durationMinutes * pixelsPerMinute);
     totalMinutes = Math.max(totalMinutes, step.endMinute);
   }
 
   const boxes = nodes.map(node => {
     const step = steps.get(node.id);
     let x = node.type === 'finalDish' ? totalMinutes * pixelsPerMinute : -300;
-    let width = MIN_STEP_WIDTH;
     let data = node.data;
     if (step) {
-      x = step.x;
-      width = step.width;
+      x = step.startMinute * pixelsPerMinute;
       const { startMinute, endMinute, durationMinutes } = step;
       data = { ...data, startMinute, endMinute, durationMinutes };
     } else if (node.type === 'finalDish') {
       data = { ...data, endMinute: totalMinutes };
     }
-    return { node, data, preferredY: data.preferredY, x, right: x + width, height: node.height || 100 };
+    return { node, data, preferredY: data.preferredY, x, left: x, right: x + MIN_STEP_WIDTH,
+      span: step ? step.durationMinutes * pixelsPerMinute : 0, height: node.height || 100 };
   });
 
-  placeRows(boxes);
+  placeRows(boxes, edges);
   return boxes.map(({ node, data, x, y }) => ({ ...node, data, position: { x, y } }));
 }
