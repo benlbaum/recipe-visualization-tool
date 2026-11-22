@@ -11,6 +11,34 @@ npm run dev
 
 For the Electron desktop app, run `npm run build` followed by `npm run electron`. On Windows, `npm run package` builds the installer and portable app in `release/`. The production build includes its fonts and example recipe photo for offline use.
 
+## Import from a recipe website
+
+Choose **Import**, paste the recipe page URL, and select **Read website**. Review the ingredients and instructions, then choose **Save recipe**. Pages with several published recipe cards offer a recipe selector. **Published recipe** reopens the source link, original directions, yield, author, times, notes and nutrition when supplied. An available JPEG, PNG or WebP cover is resized and saved on the device. JSON import and export still work.
+
+The importer reads Schema.org Recipe JSON-LD and microdata, follows document-local references, and recognizes visible ingredient and direction lists on simpler pages. For a site that blocks automated access, try its print link or **Use saved page HTML**. Pages that require sign-in or JavaScript and provide no readable recipe in the returned HTML may need that fallback.
+
+The cooking plan starts in published order. Step durations supplied by the publisher are used directly. Other steps have a marked one-minute planning estimate that you can edit. The source card retains the publisher’s whole-recipe times and recipe data.
+
+## Run the website on a home network
+
+The host needs Node.js and Python 3.12 or later. Phones and other computers only need a browser.
+
+```sh
+npm ci
+npm run build
+python website/serve.py
+```
+
+This serves the app and importer together at **http://127.0.0.1:8767/**. For a phone, pass the host computer’s Wi-Fi or Ethernet IPv4 address and subnet prefix. For example, on a home network with a 255.255.255.0 subnet mask:
+
+```sh
+python website/serve.py --lan 192.168.1.20/24 --port 8767
+```
+
+Open the printed address on a device connected to the same LAN. The server binds to that interface and accepts peers on the specified subnet. The host firewall must allow inbound TCP on that port. Each browser keeps its own recipe box. Stop the foreground server with Ctrl+C.
+
+For frontend development, run the loopback Python server alongside `npm run dev`. Vite forwards imports to it. The Electron app runs the same importer directly using `python` on Windows or `python3` on macOS and Linux.
+
 ## Plan a recipe
 
 - Open the beer cheese dip example or choose **New recipe** to start your own.
@@ -28,6 +56,7 @@ For the Electron desktop app, run `npm run build` followed by `npm run electron`
 npm test
 npm run lint
 npm run build
+python -m unittest discover -s website/tests -v
 ```
 
 Run `npm run test:ui` for the phone walkthrough. It builds Mise and tests the stir-fry with touch input in Electron’s Chromium at 568×320 and 390×844. On headless Linux, run it under a display server such as Xvfb.

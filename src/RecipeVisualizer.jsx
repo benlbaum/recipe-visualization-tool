@@ -22,6 +22,8 @@ import SelectionDetails from './SelectionDetails.jsx';
 import PlanHeader from './PlanHeader.jsx';
 import { IngredientsPanel } from './RecipePanels.jsx';
 import CookingMethod from './CookingMethod.jsx';
+import WebsiteImport, { PublishedRecipe } from './WebsiteImport.jsx';
+import { timeLabel } from './websiteRecipe.js';
 import { ItemEditor, NewRecipeDialog, RecipeBoxDialog, RecipeDialog, PhotoDialog } from './RecipeDialogs.jsx';
 import { boxReducer, listRecipes, makeRecipeBox, serializeRecipeBox } from './recipeBox.js';
 import { exportRecipe, recipeReducer } from './recipeGraph.js';
@@ -42,7 +44,10 @@ function readDrafts() {
 
 function itemChange(node, label, durationMinutes, sources) {
   const data = { ...node.data, label };
-  if (node.type === 'step') data.durationMinutes = durationMinutes;
+  if (node.type === 'step') {
+    if (durationMinutes !== data.durationMinutes) delete data.durationEstimated;
+    data.durationMinutes = durationMinutes;
+  }
   return { type: 'saveItem', node: { ...node, data }, sources };
 }
 
@@ -50,8 +55,9 @@ function RecipeEditor() {
   const [initial] = useState(readDrafts);
   const [recipe, dispatch] = useReducer(boxReducer, initial.state);
   const compact = useMediaQuery(smallScreen, { noSsr: true });
+  const dish = recipe.nodes.find(node => node.type === 'finalDish');
   const place = `mise.read.${recipe.activeId}.${compact ? 'compact' : 'wide'}`;
-  const [readingView, setReadingView] = useReadingChoice(place + '.view', compact ? 'method' : 'timeline');
+  const [readingView, setReadingView] = useReadingChoice(place + '.view', compact || dish?.data.sourceRecipe ? 'method' : 'timeline');
   const [expandedView, setExpandedView] = useReadingChoice(place + '.expanded', 'no');
   const expanded = expandedView !== 'no';
   const view = expanded ? expandedView : readingView;
@@ -74,12 +80,13 @@ function RecipeEditor() {
   const fileInput = useRef(null);
   const methodButton = useRef(null);
   const lastSaved = useRef(initial.raw);
-  const dish = recipe.nodes.find(node => node.type === 'finalDish');
   const title = dish?.data.label || 'Untitled recipe';
   const steps = recipe.nodes.filter(node => node.type === 'step');
   const ingredients = recipe.nodes.filter(node => node.type === 'ingredient');
   const selected = recipe.nodes.filter(node => node.selected && (showIngredients || node.type !== 'ingredient'));
   const total = steps.reduce((end, node) => Math.max(end, node.data.endMinute), 0);
+  const publishedTime = timeLabel(dish?.data.sourceRecipe?.published.totalTime);
+  const durationLabel = publishedTime ? `Published ${publishedTime}` : `${total} min${dish?.data.sourceRecipe ? ' plan' : ''}`;
   const checkedIds = useMemo(() => new Set(recipe.checkedIds), [recipe.checkedIds]);
   const completed = useMemo(() => new Set(recipe.completedStepIds), [recipe.completedStepIds]);
   const openEditor = useCallback(id => setModal({ screen: 'edit', id }), []);
@@ -191,7 +198,7 @@ function RecipeEditor() {
           <span className="app-descriptor">Recipe planner</span>
           <nav className="app-actions" aria-label="Recipes">
             <button className="text-action box-action" onClick={() => setModal({ screen: 'box' })}><MenuBookOutlinedIcon />Recipe box</button>
-            <button className="text-action file-action" title="Import recipe" aria-label="Import recipe" onClick={() => fileInput.current.click()}>
+            <button className="text-action file-action" title="Import recipe" aria-label="Import recipe" onClick={() => setModal({ screen: 'import' })}>
               <FileOpenOutlinedIcon /><span>Import</span></button>
             <button className="text-action file-action" title="Export recipe" aria-label="Export recipe" onClick={download}>
               <FileDownloadOutlinedIcon /><span>Export</span></button>
@@ -210,9 +217,10 @@ function RecipeEditor() {
                 onClick={() => dish ? openEditor(dish.id) : add('finalDish')}><EditOutlinedIcon /></button>
             </div>
             <div className="recipe-facts">
-              <span><AccessTimeRoundedIcon />{total} min</span>
+              <span><AccessTimeRoundedIcon />{durationLabel}</span>
               <span>{steps.length} {steps.length === 1 ? 'step' : 'steps'}</span>
               <span>{ingredients.length} {ingredients.length === 1 ? 'ingredient' : 'ingredients'}</span>
+              {dish?.data.sourceRecipe && <span><button className="source-button" onClick={() => setModal({ screen: 'source' })}>Published recipe</button></span>}
             </div>
           </div>
           {recipe.cover && <RecipePhoto className="recipe-photo" cover={recipe.cover}
@@ -242,6 +250,8 @@ function RecipeEditor() {
                 Ingredient links</label>}
             </div>
             <div className={'plan-body view-' + view}>
+              {view !== 'ingredients' && steps.some(node => node.data.durationEstimated) &&
+                <p className="plan-estimate">Estimated schedule · Untimed steps use 1 minute until edited.</p>}
               {view === 'ingredients' ? ingredientPanel : view === 'method'
                 ? <CookingMethod key={recipe.activeId} nodes={recipe.nodes} edges={recipe.edges}
                   completedStepIds={recipe.completedStepIds} onToggleStep={toggleStep}
@@ -271,6 +281,13 @@ function RecipeEditor() {
         countReopened={editing && completed.size ? (label, duration, sources) =>
           completed.size - boxReducer(recipe, itemChange(editing, label, duration, sources)).completedStepIds.length : undefined} />}
       {modal?.screen === 'new' && <NewRecipeDialog onClose={close} onCreate={createRecipe} />}
+      {modal?.screen === 'import' && <WebsiteImport onClose={close} onFile={() => fileInput.current.click()}
+        onImport={(file, notice) => {
+          dispatch({ type: 'insertRecipe', id: newId('recipe'), file });
+          if (notice) dispatch({ type: 'error', message: notice });
+          close();
+        }} />}
+      {modal?.screen === 'source' && dish?.data.sourceRecipe && <PublishedRecipe card={dish.data.sourceRecipe} onClose={close} />}
       {modal?.screen === 'progress' && <RecipeDialog title={modal.title} onClose={close}>
         <div className="dialog-body"><p className="confirm-text">{modal.message}</p></div>
         <footer className="dialog-actions"><button className="action secondary" autoFocus onClick={close}>Cancel</button>
@@ -279,7 +296,7 @@ function RecipeEditor() {
       {modal?.screen === 'photo' && <PhotoDialog cover={recipe.cover} onClose={close}
         onSave={cover => { dispatch({ type: 'setCover', cover }); close(); }} />}
       {modal?.screen === 'box' && <RecipeBoxDialog entries={listRecipes(recipe)} activeId={recipe.activeId} onClose={close}
-        onOpen={id => { dispatch({ type: 'openRecipe', id }); close(); }} onImport={() => fileInput.current.click()}
+        onOpen={id => { dispatch({ type: 'openRecipe', id }); close(); }} onImport={() => setModal({ screen: 'import' })}
         onRemove={entry => setRemoval({ entry })}
         onExample={cover => {
           dispatch({ type: 'insertRecipe', id: newId('recipe'), file: cover === 'beer-cheese' ? demoRecipe : stirFryRecipe, cover });

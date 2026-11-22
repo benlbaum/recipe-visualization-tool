@@ -1,0 +1,16 @@
+.published-card { overflow-wrap: anywhere; }
+.published-card h3 { font: 400 1.9rem/1.15 var(--font-display); margin-bottom: 4px; }
+.published-card a, .import-alternative { color: var(--forest); text-underline-offset: 3px; }
+.published-card p, .website-import [role="status"] { margin-block: 12px; font-size: .9rem; }
+.published-card dl { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-block: 14px; }
+.published-card dt { color: var(--muted); font-size: .78rem; }
+.published-card dd { margin: 0; font-size: .9rem; }
+.published-card details { border-top: 1px solid var(--rule); }
+.published-card summary, .import-photo { padding-block: 10px; font-size: .9rem; cursor: pointer; }
+.published-card li { margin-bottom: 6px; }
+.published-card ul, .published-card ol { padding-left: 24px; }
+.import-alternative { min-height: 44px; border: 0; background: transparent; padding: 0; text-decoration: underline; }
+.import-photo { display: flex; align-items: center; gap: 6px; }
+.source-button { border: 0; border-bottom: 1px solid currentColor; padding: 1px; background: transparent; font-size: inherit; }
+.website-import select { width: 100%; padding: 8px; margin-bottom: 12px; }
+.plan-estimate { margin: 0; padding: 5px 14px; background: #f4eddf; color: #644c29; font-size: .78rem; }

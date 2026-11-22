@@ -1,13 +1,16 @@
 import { addEdge, applyEdgeChanges, applyNodeChanges } from 'reactflow';
 import { getStepDescription, getStepDuration, layoutRecipe } from './recipeTimeline.js';
+import { isWebsiteRecipe } from './websiteRecipe.js';
 
 export const emptyRecipe = { nodes: [], edges: [], error: '', importVersion: 0 };
 
 export function savedRecipeNode({ id, type, data }) {
   const saved = { label: data.label, background: data.background };
+  if (type === 'finalDish' && isWebsiteRecipe(data.sourceRecipe)) saved.sourceRecipe = data.sourceRecipe;
   if (Number.isFinite(data.preferredY)) saved.preferredY = data.preferredY;
   if (type === 'step') {
     saved.durationMinutes = data.durationMinutes;
+    if (data.durationEstimated === true) saved.durationEstimated = true;
     // The legacy reader removes exactly one suffix, including when the
     // cook's own description already ends with a duration.
     saved.label = `${data.label} (${data.durationMinutes} min)`;
@@ -41,10 +44,12 @@ function readRecipe(file) {
     }
     ids.add(id);
     const restored = { label: data.label, background: data.background };
+    if (type === 'finalDish' && isWebsiteRecipe(data.sourceRecipe)) restored.sourceRecipe = data.sourceRecipe;
     if (Number.isFinite(data.preferredY)) restored.preferredY = data.preferredY;
     if (type === 'step') {
       restored.label = getStepDescription(data);
       restored.durationMinutes = getStepDuration(data);
+      if (data.durationEstimated === true) restored.durationEstimated = true;
     }
     return { id, type, data: restored };
   });

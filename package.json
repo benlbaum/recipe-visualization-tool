@@ -12,6 +12,7 @@
     "test:ui": "npm run build && node scripts/mobile-ui.cjs",
     "lint": "eslint . --max-warnings 0",
     "preview": "vite preview",
+    "serve": "python website/serve.py",
     "electron": "electron .",
     "package": "npm run build && electron-builder build --win"
   },
@@ -47,8 +48,10 @@
     "productName": "Mise Recipe Planner",
     "files": [
       "dist/**/*",
-      "electron.cjs"
+      "electron.cjs",
+      "preload.cjs"
     ],
+    "extraResources": [{ "from": "website", "to": "website", "filter": ["*.py"] }],
     "directories": {
       "buildResources": "assets",
       "output": "release"

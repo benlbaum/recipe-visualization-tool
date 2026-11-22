@@ -125,6 +125,8 @@ async function run(page) {
         touchPoints: [{ x: start.x, y: start.y + 80 - move * 16 }] });
       await delay(20);
     }
+    // End the drag at rest. A fling can consume the next tap on Ingredients.
+    await delay(160);
     await cdp('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await delay(100);
   }
