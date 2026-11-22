@@ -30,7 +30,7 @@
 }
 
 .recipe-node--step {
-  width: max(var(--caption-width), var(--bar-width));
+  width: max(var(--caption-width), calc(var(--bar-width) + var(--bar-offset)));
   margin-left: var(--start-inset);
   min-height: 0;
   display: block;
@@ -50,6 +50,7 @@
 
 .recipe-node__bar {
   position: relative;
+  margin-left: var(--bar-offset);
   width: var(--bar-width);
   height: 12px;
   border-radius: 4px;

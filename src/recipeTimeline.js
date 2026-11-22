@@ -89,7 +89,7 @@ function scheduleSteps(nodes, edges, pixelsPerMinute) {
   return steps;
 }
 
-function placeRows(boxes, edges, { minWidth, maxWidth, rowGap }) {
+function placeRows(boxes, edges, { minWidth, maxWidth, rowGap, stackSuccessors, allowLeftOverhang }) {
   const byId = new Map(boxes.map(box => [box.node.id, box]));
   for (const edge of edges) {
     const source = byId.get(edge.source);
@@ -117,9 +117,17 @@ function placeRows(boxes, edges, { minWidth, maxWidth, rowGap }) {
     const endInset = box.hasHandoff ? inset : 0;
     const barWidth = box.span - startInset - endInset;
     const captionWidth = box.hasHandoff ? Math.max(minWidth, Math.min(maxWidth, barWidth)) : maxWidth;
-    box.data = { ...box.data, startInset, barWidth, captionWidth, captionAbove: false };
-    box.left += startInset;
-    box.right = box.left + Math.max(barWidth, captionWidth);
+    const barLeft = box.x + startInset;
+    // In a stacked overview a short caption can extend back over earlier
+    // minutes, keeping the next handoff and incoming parallel links visible.
+    const endAligned = barLeft + barWidth - captionWidth;
+    const captionLeft = stackSuccessors && (endAligned >= 0 || allowLeftOverhang) ? Math.min(barLeft, endAligned) : barLeft;
+    const barOffset = barLeft - captionLeft;
+    if (barOffset > 0) box.displayX = captionLeft;
+    box.data = { ...box.data, startInset: barOffset > 0 ? 0 : startInset,
+      barOffset, barWidth, captionWidth, captionAbove: false };
+    box.left = captionLeft;
+    box.right = Math.max(barLeft + barWidth, captionLeft + captionWidth);
   }
   // Reserve dragged rows first. A short bar's label can extend past its
   // finish time, so use the entire node footprint when sharing rows.
@@ -129,7 +137,8 @@ function placeRows(boxes, edges, { minWidth, maxWidth, rowGap }) {
   const placed = []; // sorted top to bottom
   for (const box of byPriority) {
     const pinned = Number.isFinite(box.preferredY);
-    const floor = pinned ? box.preferredY : box.parent?.floor ?? 0;
+    const branchTop = stackSuccessors ? box.parent?.y : box.parent?.floor;
+    const floor = pinned ? box.preferredY : branchTop ?? 0;
     const preferred = pinned ? floor : box.parent?.y ?? floor;
     let top = floor;
     let firstGap;
@@ -155,13 +164,7 @@ function placeRows(boxes, edges, { minWidth, maxWidth, rowGap }) {
   }
 }
 
-export function layoutRecipe(nodes, edges, pixelsPerMinute = PIXELS_PER_MINUTE, cards = timelineCards.desktop) {
-  const steps = scheduleSteps(nodes, edges, pixelsPerMinute);
-  let totalMinutes = 0;
-  for (const step of steps.values()) {
-    totalMinutes = Math.max(totalMinutes, step.endMinute);
-  }
-
+function positionRecipe(nodes, edges, steps, totalMinutes, pixelsPerMinute, cards) {
   const boxes = nodes.map(node => {
     const step = steps.get(node.id);
     let x = node.type === 'finalDish' ? totalMinutes * pixelsPerMinute : -cards.maxWidth - 90;
@@ -178,5 +181,68 @@ export function layoutRecipe(nodes, edges, pixelsPerMinute = PIXELS_PER_MINUTE, 
   });
 
   placeRows(boxes, edges, cards);
-  return boxes.map(({ node, data, x, y }) => ({ ...node, data, position: { x, y } }));
+  return boxes;
+}
+
+function positionedNodes(boxes) {
+  return boxes.map(({ node, data, x, displayX, y }) => ({ ...node, data, position: { x: displayX ?? x, y } }));
+}
+
+function finishMinute(steps) {
+  let total = 0;
+  for (const step of steps.values()) total = Math.max(total, step.endMinute);
+  return total;
+}
+
+export function layoutRecipe(nodes, edges, pixelsPerMinute = PIXELS_PER_MINUTE, cards = timelineCards.desktop) {
+  const steps = scheduleSteps(nodes, edges, pixelsPerMinute);
+  return positionedNodes(positionRecipe(nodes, edges, steps, finishMinute(steps), pixelsPerMinute, cards));
+}
+
+// Search the time-axis length in graph pixels. A shorter axis shares more
+// columns and needs more rows. Score each arrangement at the uniform zoom
+// that shows every card, keeping times and manually assigned rows intact.
+export function fitRecipeLayout(nodes, edges, width, height, controlsInRuler) {
+  if (!nodes.length || !width || !height) return null;
+  const top = 18;
+  const availableWidth = Math.max(1, width - 24);
+  const availableHeight = Math.max(1, height - top - (controlsInRuler ? 10 : 56));
+  const aspect = availableWidth / availableHeight;
+  // Keep caption widths fixed during the search so measured text heights
+  // remain valid across candidate layouts and after the final DOM reflow.
+  const caption = Math.round(Math.max(168, Math.min(250, 160 + 24 * aspect)));
+  const cards = { minWidth: caption, maxWidth: caption, rowGap: 14, stackSuccessors: true, allowLeftOverhang: aspect < 1 };
+  const steps = scheduleSteps(nodes, edges, 0);
+  const total = finishMinute(steps);
+  let low = 0;
+  let high = Math.min(1_000_000, Math.max(availableWidth,
+    aspect * nodes.reduce((sum, node) => sum + (node.height || 100) + cards.rowGap, 0)));
+  let span = Math.min(high, availableWidth);
+  let best;
+  for (let pass = 0; pass < 12; pass++) {
+    const pixelsPerMinute = total ? Math.min(Number.MAX_VALUE, span / total) : PIXELS_PER_MINUTE;
+    const boxes = positionRecipe(nodes, edges, steps, total, pixelsPerMinute, cards);
+    let left = Infinity, right = -Infinity, upper = Infinity, lower = -Infinity;
+    for (const box of boxes) {
+      left = Math.min(left, box.displayX ?? box.x);
+      right = Math.max(right, box.right);
+      upper = Math.min(upper, box.y);
+      lower = Math.max(lower, box.y + box.height);
+    }
+    const w = right - left;
+    const h = lower - upper;
+    const zoom = Math.min(1.25, availableWidth / w, availableHeight / h);
+    const area = w * h * zoom * zoom;
+    if (!best || zoom > best.zoom || (zoom === best.zoom && area > best.area)) {
+      best = { boxes, zoom, area, pixelsPerMinute,
+        x: (width - w * zoom) / 2 - left * zoom,
+        y: top + (availableHeight - h * zoom) / 2 - upper * zoom };
+    }
+    if (!total || high - low < 1) break;
+    if (w / h > aspect) high = span;
+    else low = span;
+    span = (low + high) / 2;
+  }
+  return { nodes: positionedNodes(best.boxes), pixelsPerMinute: best.pixelsPerMinute,
+    viewport: { x: best.x, y: best.y, zoom: best.zoom } };
 }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { getStepDescription, getStepDuration, getStepNames, layoutRecipe, MIN_STEP_WIDTH, PIXELS_PER_MINUTE } from '../src/recipeTimeline.js';
+import { fitRecipeLayout, getStepDescription, getStepDuration, getStepNames, layoutRecipe, MIN_STEP_WIDTH, PIXELS_PER_MINUTE } from '../src/recipeTimeline.js';
 
 const step = (id, durationMinutes) => ({ id, type: 'step', data: { label: id, durationMinutes } });
 const edge = (source, target) => ({ source, target });
@@ -13,6 +13,39 @@ function timings(layout) {
     [node.id, [node.data.startMinute, node.data.endMinute]]
   ));
 }
+
+test('fitting a measured graph preserves timing, pinned rows and the finish at different aspect ratios', () => {
+  const nodes = [ingredient, { ...step('chop', 1), data: { label: 'Chop', durationMinutes: 1, preferredY: -40 } },
+    step('heat', 2), step('stir', 0.5), step('fold', 4), dish];
+  const edges = [edge('salt', 'chop'), edge('heat', 'stir'), edge('chop', 'fold'), edge('stir', 'fold'), edge('fold', 'dish')];
+  const regular = layoutRecipe(nodes, edges);
+  for (const [width, height] of [[760, 313], [320, 600]]) {
+    const fit = fitRecipeLayout(regular, edges, width, height, width > height);
+    assert.deepEqual(timings(fit.nodes), timings(regular));
+    assert.equal(fit.nodes[1].position.y, -40);
+    assert.equal(fit.nodes.at(-1).position.x, 6.5 * fit.pixelsPerMinute);
+    for (const node of fit.nodes) {
+      const { zoom, x, y } = fit.viewport;
+      const left = node.position.x + (node.data.startInset ?? 0);
+      const right = left + Math.max(node.data.captionWidth, (node.data.barWidth ?? 0) + (node.data.barOffset ?? 0));
+      assert.ok(x + left * zoom >= 0 && x + right * zoom <= width);
+      assert.ok(y + node.position.y * zoom >= 0 && y + (node.position.y + 100) * zoom <= height);
+      if (node.type === 'step') {
+        const barStart = left + node.data.barOffset;
+        assert.ok(barStart >= node.data.startMinute * fit.pixelsPerMinute - 1e-7);
+        assert.ok(barStart + node.data.barWidth <= node.data.endMinute * fit.pixelsPerMinute + 1e-7);
+      }
+    }
+  }
+});
+
+test('fitting a graph without timed steps handles empty and unmeasured canvases', () => {
+  assert.equal(fitRecipeLayout([], [], 320, 400, false), null);
+  assert.equal(fitRecipeLayout([dish], [], 0, 0, false), null);
+  const fit = fitRecipeLayout([ingredient, dish], [], 320, 400, false);
+  assert.ok(fit.viewport.zoom > 0);
+  assert.equal(fit.nodes[1].data.endMinute, 0);
+});
 
 test('step references distinguish repeated instructions at the same or different times', () => {
   const steps = ['pan', 'wok', 'finish'].map(id => ({ id, type: 'step', data: { label: 'Saute', durationMinutes: 2 } }));

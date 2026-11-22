@@ -19,7 +19,7 @@ export default function RecipeNode({ id, data, type, selected }) {
   // Moving a port within a card need not change its measured dimensions.
   useLayoutEffect(() => {
     updateNodeInternals(id);
-  }, [id, barWidth, data.startInset, data.captionAbove, data.captionWidth, data.label, updateNodeInternals]);
+  }, [id, barWidth, data.startInset, data.barOffset, data.captionAbove, data.captionWidth, data.label, updateNodeInternals]);
 
   function openMenu(event) {
     event.preventDefault();
@@ -46,6 +46,7 @@ export default function RecipeNode({ id, data, type, selected }) {
         className={`recipe-node recipe-node--${type}${selected ? ' recipe-node--selected' : ''}${data.captionAbove ? ' recipe-node--caption-above' : ''}`}
         style={{
           '--bar-width': isStep ? `${barWidth}px` : undefined,
+          '--bar-offset': `${data.barOffset ?? 0}px`,
           '--start-inset': `${data.startInset ?? 0}px`,
           '--caption-width': `${data.captionWidth ?? MIN_STEP_WIDTH}px`,
         }}
@@ -114,6 +115,7 @@ RecipeNode.propTypes = {
     pixelsPerMinute: PropTypes.number,
     startInset: PropTypes.number,
     barWidth: PropTypes.number,
+    barOffset: PropTypes.number,
     captionWidth: PropTypes.number,
     captionAbove: PropTypes.bool,
     startMinute: PropTypes.number,

@@ -9,7 +9,7 @@ import AddRounded from '@mui/icons-material/AddRounded';
 import RemoveRounded from '@mui/icons-material/RemoveRounded';
 import FitScreenOutlined from '@mui/icons-material/FitScreenOutlined';
 import RecipeNode from './RecipeNode.jsx';
-import { getStepNames, layoutRecipe, MIN_STEP_WIDTH, PIXELS_PER_MINUTE, timelineCards } from './recipeTimeline.js';
+import { fitRecipeLayout, getStepNames, layoutRecipe, MIN_STEP_WIDTH, PIXELS_PER_MINUTE, timelineCards } from './recipeTimeline.js';
 import 'reactflow/dist/style.css';
 import './TimelineCanvas.css';
 
@@ -98,13 +98,13 @@ function TimelineScale({ pixelsPerMinute, total }) {
 }
 TimelineScale.propTypes = { pixelsPerMinute: PropTypes.number.isRequired, total: PropTypes.number.isRequired };
 
-function useChartScale(nodes, total, width, height, version, showIngredients, fitRequest, cards) {
+function useChartScale(nodes, total, width, height, version, showIngredients, cards) {
   const [scale, setScale] = useState(PIXELS_PER_MINUTE);
   const lastFrame = useRef(null);
   useLayoutEffect(() => {
     const last = lastFrame.current;
     if (!width || !height || (last && last.version === version && last.showIngredients === showIngredients &&
-      last.fitRequest === fitRequest && last.cards === cards &&
+      last.cards === cards &&
       Math.abs(width - last.width) < 96 && (last.hadSteps || !total))) return;
     // Allocate spare space to the time axis. Keep this scale while the cook edits
     // a recipe so changing a duration visibly changes its bar and dependents.
@@ -126,8 +126,8 @@ function useChartScale(nodes, total, width, height, version, showIngredients, fi
     const typicalDuration = durations[middle] || 1;
     const readingScale = landscape || width < 600 ? cards.maxWidth / typicalDuration : 0;
     setScale(total ? Math.min(180, Math.max(readingScale, available / total)) : PIXELS_PER_MINUTE);
-    lastFrame.current = { width, version, showIngredients, fitRequest, cards, hadSteps: total > 0 };
-  }, [nodes, total, width, height, version, showIngredients, fitRequest, cards]);
+    lastFrame.current = { width, version, showIngredients, cards, hadSteps: total > 0 };
+  }, [nodes, total, width, height, version, showIngredients, cards]);
   // Guard transient frames and edits far larger than the originally fitted
   // recipe. CSS and ReactFlow need finite, representable pixel coordinates.
   return total > 0 ? Math.min(scale, 1_000_000 / total) : scale;
@@ -153,8 +153,8 @@ function ViewportControls({ onFit }) {
 }
 ViewportControls.propTypes = { onFit: PropTypes.func.isRequired };
 
-function FrameRecipe({ version, showIngredients, pixelsPerMinute, fitRequest, widePhone }) {
-  const { fitView, getNodes, setViewport } = useReactFlow();
+function FrameRecipe({ version, showIngredients, pixelsPerMinute, widePhone }) {
+  const { getNodes, setViewport } = useReactFlow();
   const initialized = useNodesInitialized();
   const width = useStore(state => state.width);
   const height = useStore(state => state.height);
@@ -164,18 +164,14 @@ function FrameRecipe({ version, showIngredients, pixelsPerMinute, fitRequest, wi
     if (!initialized || width <= 0 || height <= 0) return;
     const last = framed.current;
     if (last && last.version === version && last.showIngredients === showIngredients && last.scale === pixelsPerMinute
-      && last.fitRequest === fitRequest && last.widePhone === widePhone
+      && last.widePhone === widePhone
       && (!widePhone || Math.abs(last.screenHeight - window.innerHeight) < 32)
       && Math.abs(width - last.width) < 96) return;
     let frame;
     function fit() {
       const nodes = getNodes();
       if (!nodes.length) return;
-      framed.current = { version, showIngredients, width, screenHeight: window.innerHeight, scale: pixelsPerMinute, fitRequest, widePhone };
-      if (last && last.fitRequest !== fitRequest) {
-        fitView({ padding: 0.18, minZoom, maxZoom: 1.25, duration: 160 });
-        return;
-      }
+      framed.current = { version, showIngredients, width, screenHeight: window.innerHeight, scale: pixelsPerMinute, widePhone };
       const bounds = getNodesBounds(nodes);
       const padding = width < 600 ? 18 : 28;
       // On narrow screens keep text at reading size and allow the cook to pan.
@@ -190,7 +186,7 @@ function FrameRecipe({ version, showIngredients, pixelsPerMinute, fitRequest, wi
     // Wait for ReactFlow's ResizeObserver to measure bars at the new scale.
     frame = requestAnimationFrame(() => { frame = requestAnimationFrame(fit); });
     return () => cancelAnimationFrame(frame);
-  }, [version, showIngredients, pixelsPerMinute, fitRequest, widePhone, initialized, width, height, fitView, getNodes, setViewport]);
+  }, [version, showIngredients, pixelsPerMinute, widePhone, initialized, width, height, getNodes, setViewport]);
   return null;
 }
 
@@ -199,7 +195,18 @@ FrameRecipe.propTypes = {
   version: PropTypes.number.isRequired,
   showIngredients: PropTypes.bool.isRequired,
   pixelsPerMinute: PropTypes.number.isRequired,
-  fitRequest: PropTypes.number.isRequired,
+};
+
+function OverviewCamera({ x, y, zoom, request }) {
+  const { setViewport } = useReactFlow();
+  useLayoutEffect(() => {
+    setViewport({ x, y, zoom });
+  }, [x, y, zoom, request, setViewport]);
+  return null;
+}
+OverviewCamera.propTypes = {
+  x: PropTypes.number.isRequired, y: PropTypes.number.isRequired,
+  zoom: PropTypes.number.isRequired, request: PropTypes.number.isRequired,
 };
 
 export default function TimelineCanvas({
@@ -207,13 +214,14 @@ export default function TimelineCanvas({
 }) {
   const width = useStore(state => state.width);
   const height = useStore(state => state.height);
-  const [fitRequest, setFitRequest] = useState(0);
+  const [fit, setFit] = useState({ version: null, request: 0 });
   const widePhone = useMediaQuery('(orientation: landscape) and (max-height: 540px) and (pointer: coarse)', { noSsr: true });
   const tallPhone = useMediaQuery('(orientation: portrait) and (max-width: 760px) and (pointer: coarse)', { noSsr: true });
   const cards = widePhone ? timelineCards.landscape : tallPhone ? timelineCards.portrait : timelineCards.desktop;
   const total = nodes.reduce((end, node) => Math.max(end, node.data.endMinute ?? 0), 0);
-  const pixelsPerMinute = useChartScale(nodes, total, width, height, version, showIngredients, fitRequest, cards);
-  const { visibleNodes, visibleEdges } = useMemo(() => {
+  const readingScale = useChartScale(nodes, total, width, height, version, showIngredients, cards);
+  const overviewRequested = fit.version === version;
+  const { visibleNodes, visibleEdges, pixelsPerMinute, viewport } = useMemo(() => {
     const shown = showIngredients ? nodes : nodes.filter(node => node.type !== 'ingredient');
     const stepNames = getStepNames(shown);
     const cookingNodes = new Set(shown.filter(node => node.type !== 'ingredient').map(node => node.id));
@@ -239,7 +247,10 @@ export default function TimelineCanvas({
         className: linked || edge.selected ? `${edge.className ?? ''} timeline-edge--linked` : edge.className,
       };
     });
-    const visibleNodes = layoutRecipe(shown, visibleEdges, pixelsPerMinute, cards).map((node, index) => ({
+    const overview = overviewRequested ? fitRecipeLayout(shown, visibleEdges, width, height, widePhone) : null;
+    const pixelsPerMinute = overview?.pixelsPerMinute ?? readingScale;
+    const positions = overview?.nodes ?? layoutRecipe(shown, visibleEdges, pixelsPerMinute, cards);
+    const visibleNodes = positions.map((node, index) => ({
       ...node,
       ariaLabel: node.ariaLabel ?? `${references.get(node.id)}${node.data.done ? ', completed' : ''}`,
       // A drag supplies live y coordinates until its row is saved on release.
@@ -248,8 +259,8 @@ export default function TimelineCanvas({
       data: { ...node.data, pixelsPerMinute,
         editLabel: repeated.has(node.data.label) ? references.get(node.id) : node.data.label },
     }));
-    return { visibleNodes, visibleEdges };
-  }, [nodes, edges, showIngredients, pixelsPerMinute, cards]);
+    return { visibleNodes, visibleEdges, pixelsPerMinute, viewport: overview?.viewport };
+  }, [nodes, edges, showIngredients, readingScale, cards, overviewRequested, width, height, widePhone]);
 
   function deleteSelection(event) {
     if (!['Backspace', 'Delete'].includes(event.key) || event.defaultPrevented || event.repeat ||
@@ -276,12 +287,13 @@ export default function TimelineCanvas({
         <ReactFlow nodes={visibleNodes} edges={visibleEdges}
           onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect}
           nodeTypes={nodeTypes} edgeTypes={edgeTypes} defaultEdgeOptions={defaultEdgeOptions}
-          minZoom={minZoom} maxZoom={maxZoom} deleteKeyCode={null}>
-          <FrameRecipe key={widePhone && expanded ? 'expanded' : 'normal'} version={version} showIngredients={showIngredients}
-            pixelsPerMinute={pixelsPerMinute} fitRequest={fitRequest} widePhone={widePhone} />
+          minZoom={Math.min(minZoom, viewport?.zoom ?? minZoom)} maxZoom={maxZoom} deleteKeyCode={null}>
+          {viewport ? <OverviewCamera {...viewport} request={fit.request} /> :
+            <FrameRecipe key={widePhone && expanded ? 'expanded' : 'normal'} version={version} showIngredients={showIngredients}
+              pixelsPerMinute={pixelsPerMinute} widePhone={widePhone} />}
         </ReactFlow>
       </div>
-      <ViewportControls onFit={() => setFitRequest(request => request + 1)} />
+      <ViewportControls onFit={() => setFit(last => ({ version, request: last.request + 1 }))} />
     </section>
   );
 }

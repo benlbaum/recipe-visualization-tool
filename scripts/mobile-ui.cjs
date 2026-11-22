@@ -178,6 +178,30 @@ async function run(page) {
   });
   await phone(390, 844);
   await until('portrait cards after rotating back', async () => (await cardShape())?.width === upright.width);
+  const overview = () => read(() => {
+    const pane = document.querySelector('.react-flow__pane').getBoundingClientRect();
+    const boxes = [...document.querySelectorAll('.recipe-node')].map(el => el.getBoundingClientRect());
+    const top = Math.min(...boxes.map(box => box.top));
+    const bottom = Math.max(...boxes.map(box => box.bottom));
+    return { zoom: parseInt(document.querySelector('.timeline-controls__percent').textContent, 10),
+      heightUsed: (bottom - top) / pane.height, inside: boxes.length === 7 && boxes.every(box =>
+        box.left >= pane.left - 1 && box.right <= pane.right + 1 && box.top >= pane.top - 1 && box.bottom <= pane.bottom + 1) };
+  });
+  await phone(760, 400);
+  await button('Fit visible recipe to view');
+  const fitted = await until('whole recipe using the height of the landscape plot', async () => {
+    const state = await overview();
+    return state.inside && state.zoom > 50 && state.heightUsed > 0.7 && state;
+  });
+  await button('Zoom in');
+  await until('manual zoom from the fitted overview', async () => (await overview()).zoom > fitted.zoom);
+  await button('Fit visible recipe to view');
+  await until('repeatable Fit all', async () => (await overview()).zoom === fitted.zoom);
+  await phone(390, 844);
+  await until('fitted recipe reflows after rotating to portrait', async () => {
+    const state = await overview();
+    return state.inside && state.heightUsed > 0.7;
+  });
   await button('Exit expanded view');
   assert.ok(Math.abs((await planBounds()).top - initial.top) <= 1);
 
